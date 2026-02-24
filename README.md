@@ -1,59 +1,191 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NovaCMS
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+NovaCMS is an AI-powered headless CMS built on Laravel.  
+It stores and serves structured content through APIs and processes AI tasks asynchronously in the background.
 
-## About Laravel
+## What NovaCMS Provides
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- content management for `Post` and `Page`
+- async AI summarization pipeline
+- real-time generation status updates
+- semantic search with vector embeddings
+- versioned prompt management for controlled AI outputs
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## System Architecture
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```text
+Filament Admin / API Client
+           |
+           v
+      Content Write
+           |
+           v
+   content_hash invalidation
+           |
+           v
+ Redis Queue -> GenerateContentSummaryJob -> AI Provider
+           |                                  (Ollama/OpenAI)
+           v
+  content_ai_summaries + metadata
+           |
+           v
+   Reverb broadcast events
+           |
+           v
+Realtime status in admin/API consumers
+```
 
-## Learning Laravel
+## Technology Stack
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+| Layer | Technology | Purpose |
+|---|---|---|
+| Backend | Laravel 12, PHP 8.2+ | Core domain, jobs, events, API integration |
+| Database | PostgreSQL 16 | Relational content storage |
+| Vector Search | pgvector | Embeddings storage and similarity queries |
+| Queue/Cache | Redis + Predis | Async jobs and cache backend |
+| Queue Monitoring | Horizon | Worker management and queue visibility |
+| Realtime | Reverb | WebSocket broadcasting for status updates |
+| Admin | Filament | Content operations and editorial UI |
+| API | Lighthouse GraphQL | Schema-driven content API |
+| AI (default) | Ollama | Local LLM inference without external costs |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## How It Works
 
-## Laravel Sponsors
+### 1. Content Lifecycle
+- editor creates or updates content (`Post` or `Page`)
+- system computes `content_hash` from content fields
+- if hash changed, AI summary status becomes `pending`
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Async AI Processing
+- `GenerateContentSummaryJob` is pushed to Redis queue
+- worker sets status to `generating`
+- for long text, map-reduce summarization strategy is applied
+- generated output includes:
+  - TL;DR
+  - bullet points
+  - meta description
+  - FAQ
+  - tags
+- summary record is updated and status becomes `ready` (or `failed` with error details)
 
-### Premium Partners
+### 3. Realtime Status
+- on status changes, domain events are broadcast via Reverb
+- admin UI can render live transitions:
+  - `pending -> generating -> ready`
+  - `pending -> generating -> failed`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 4. Semantic Search (v1.1)
+- content embeddings are stored in PostgreSQL (`pgvector`)
+- supported operations:
+  - `semanticSearch(query)`
+  - `relatedContent(contentId)`
 
-## Contributing
+## Data Model
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### `contents`
+- `id`
+- `type` (`post`, `page`)
+- `slug`
+- `title`
+- `body` (markdown)
+- `locale`
+- `status` (`draft`, `published`, `archived`)
+- `content_hash`
+- timestamps
 
-## Code of Conduct
+### `content_ai_summaries`
+- `content_id`
+- `summary_tldr`
+- `summary_bullets` (json)
+- `summary_meta_description`
+- `summary_faq` (json)
+- `summary_tags` (json)
+- `status` (`pending`, `generating`, `ready`, `failed`)
+- `model`
+- `prompt_version`
+- `tokens_in`
+- `tokens_out`
+- `last_error`
+- timestamps
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### `prompts`
+- `name`
+- `version`
+- `template`
+- `parameters`
+- `is_active`
 
-## Security Vulnerabilities
+## Prompt and Model Governance
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- prompt templates are versioned in `prompts`
+- generated summaries store:
+  - prompt version
+  - model name
+  - token usage (`tokens_in`, `tokens_out`)
+- this provides reproducibility and traceability for AI output changes
+
+## Local Infrastructure
+
+`docker-compose.yml` runs:
+- PostgreSQL (`pgvector/pgvector:pg16`)
+- Redis (`redis:7-alpine`)
+- Ollama (`ollama/ollama:latest`)
+
+## Configuration
+
+```env
+REDIS_CLIENT=predis
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=local
+REVERB_APP_KEY=localkey
+REVERB_APP_SECRET=localsecret
+REVERB_HOST=127.0.0.1
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.1
+```
+
+## Run Locally
+
+```bash
+cp .env.example .env
+composer install
+npm install
+
+docker compose up -d
+php artisan key:generate
+php artisan migrate
+
+php artisan serve
+php artisan horizon
+php artisan reverb:start
+```
+
+Pull model in Ollama:
+
+```bash
+docker compose exec ollama ollama pull llama3.1
+```
+
+## API Endpoints
+
+- GraphQL: `/graphql`
+- Admin panel: `/admin`
+
+## Current Development Focus
+
+1. complete `contents` and `content_ai_summaries` migrations
+2. implement Filament `ContentResource`
+3. implement `GenerateContentSummaryJob`
+4. finalize Ollama provider integration
+5. broadcast summary-completed events via Reverb
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT
