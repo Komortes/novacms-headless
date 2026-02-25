@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\Contents\Pages;
 
+use App\Filament\Pages\AiSettings;
 use App\Filament\Resources\Contents\ContentResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 
 class ContentFaqInfo extends Page
@@ -20,5 +23,15 @@ class ContentFaqInfo extends Page
     {
         return 'How summaries and FAQ are generated, what statuses mean, and how to operate the flow.';
     }
-}
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('aiSettings')
+                ->label('AI settings')
+                ->icon(Heroicon::Cog6Tooth)
+                ->color('gray')
+                ->url(AiSettings::getUrl()),
+        ];
+    }
+}

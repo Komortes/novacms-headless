@@ -74,6 +74,11 @@ class ListContents extends ListRecords
                 ->icon(Heroicon::QuestionMarkCircle)
                 ->url(ContentResource::getUrl('faq-info'))
                 ->color('gray'),
+            Action::make('aiSettings')
+                ->label('AI settings')
+                ->icon(Heroicon::Cog6Tooth)
+                ->url(\App\Filament\Pages\AiSettings::getUrl())
+                ->color('gray'),
             CreateAction::make(),
         ];
     }

@@ -33,11 +33,11 @@
         <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <h3 class="text-base font-semibold">Operational notes</h3>
             <ul class="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
-                <li>Use <strong>Generate summary</strong> from list/view/edit actions.</li>
+                <li>Use <strong>Generate summary</strong> from list/view/edit actions and choose provider/model per run.</li>
+                <li>Open <strong>AI Settings</strong> to set defaults and external API credentials.</li>
                 <li>Use the <strong>FAQ</strong> block on the content View page to review generated Q&A.</li>
                 <li>Change prompt version to control output style without changing application code.</li>
             </ul>
         </section>
     </div>
 </x-filament-panels::page>
-
