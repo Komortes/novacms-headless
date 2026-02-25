@@ -28,11 +28,16 @@ class ContentsTable
     {
         return $table
             ->poll('15s')
+            ->striped()
             ->defaultSort('updated_at', 'desc')
+            ->searchPlaceholder('Search by title or slug')
+            ->defaultPaginationPageOption(10)
+            ->paginated([10, 25, 50])
             ->recordUrl(fn (Content $record): string => ContentResource::getUrl('view', ['record' => $record]))
             ->columns([
                 TextColumn::make('id')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('title')
                     ->searchable()
                     ->sortable(),
@@ -69,7 +74,7 @@ class ContentsTable
                     }),
                 TextColumn::make('summary.summary_tldr')
                     ->label('TL;DR')
-                    ->limit(80)
+                    ->limit(70)
                     ->placeholder('Not generated yet')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')

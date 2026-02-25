@@ -26,6 +26,11 @@ class ViewContent extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('faqInfo')
+                ->label('FAQ & info')
+                ->icon(Heroicon::QuestionMarkCircle)
+                ->color('gray')
+                ->url($this->getResourceUrl('faq-info')),
             Action::make('generateSummary')
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)

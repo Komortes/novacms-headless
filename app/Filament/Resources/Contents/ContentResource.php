@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Contents;
 
+use App\Filament\Resources\Contents\Pages\ContentFaqInfo;
 use App\Filament\Resources\Contents\Pages\CreateContent;
 use App\Filament\Resources\Contents\Pages\EditContent;
 use App\Filament\Resources\Contents\Pages\ListContents;
@@ -70,6 +71,7 @@ class ContentResource extends Resource
     {
         return [
             'index' => ListContents::route('/'),
+            'faq-info' => ContentFaqInfo::route('/faq-info'),
             'create' => CreateContent::route('/create'),
             'view' => ViewContent::route('/{record}'),
             'edit' => EditContent::route('/{record}/edit'),

@@ -16,11 +16,12 @@ class ContentInfolist
     public static function configure(Schema $schema): Schema
     {
         return $schema
-            ->columns(1)
+            ->columns(2)
             ->components([
                 Section::make('Overview')
                     ->description('Content metadata and current publication state.')
                     ->columns(4)
+                    ->columnSpan(1)
                     ->components([
                         TextEntry::make('title')->columnSpanFull(),
                         TextEntry::make('slug')
@@ -55,6 +56,7 @@ class ContentInfolist
                 Section::make('AI Summary')
                     ->description('Generated asynchronously from prompt templates and current content hash.')
                     ->columns(2)
+                    ->columnSpan(1)
                     ->components([
                         TextEntry::make('summary.status')
                             ->label('Summary status')
@@ -104,7 +106,7 @@ class ContentInfolist
                         TextEntry::make('summary.last_error')
                             ->label('Last error')
                             ->placeholder('No errors')
-                            ->lineClamp(4)
+                            ->lineClamp(3)
                             ->color('danger')
                             ->columnSpanFull(),
                     ]),
@@ -112,6 +114,7 @@ class ContentInfolist
                     ->description('Generated Q&A extracted from the content.')
                     ->collapsible()
                     ->collapsed()
+                    ->columnSpanFull()
                     ->components([
                         RepeatableEntry::make('summary.summary_faq')
                             ->label(' ')
@@ -135,6 +138,7 @@ class ContentInfolist
                     ->description('Original source used for summary generation.')
                     ->collapsible()
                     ->collapsed()
+                    ->columnSpanFull()
                     ->components([
                         TextEntry::make('body')
                             ->markdown()
