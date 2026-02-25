@@ -70,5 +70,26 @@ class OllamaProviderTest extends TestCase
 
         $provider->generate('Summarize this');
     }
-}
 
+    public function test_generate_throws_actionable_message_when_model_is_missing(): void
+    {
+        Http::fake([
+            'http://ollama.local/api/generate' => Http::response([
+                'error' => "model 'llama3.1' not found",
+            ], 404),
+        ]);
+
+        $provider = new OllamaProvider(
+            app(HttpFactory::class),
+            'http://ollama.local',
+            'llama3.1',
+            10,
+        );
+
+        $this->expectException(AiProviderException::class);
+        $this->expectExceptionMessage('is not installed');
+        $this->expectExceptionMessage('ollama pull llama3.1');
+
+        $provider->generate('Summarize this');
+    }
+}

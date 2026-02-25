@@ -51,6 +51,18 @@ class OllamaProvider implements AiProviderInterface
                 ->post('/api/generate', $requestBody)
                 ->throw();
         } catch (RequestException|ConnectionException $exception) {
+            if ($exception instanceof RequestException && $exception->response !== null) {
+                $status = $exception->response->status();
+                $errorMessage = (string) ($exception->response->json('error') ?? '');
+
+                if ($status === 404 && str_contains($errorMessage, 'not found')) {
+                    throw new AiProviderException(
+                        "Ollama model [{$model}] is not installed. Run: docker compose exec ollama ollama pull {$model}",
+                        previous: $exception,
+                    );
+                }
+            }
+
             throw new AiProviderException(
                 'Ollama request failed: '.$exception->getMessage(),
                 previous: $exception,
@@ -72,4 +84,3 @@ class OllamaProvider implements AiProviderInterface
         );
     }
 }
-

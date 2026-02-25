@@ -12,7 +12,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('content:generate-summary {content : Content ID or slug} {--prompt-version=} {--provider=}', function () {
+Artisan::command('content:generate-summary {content : Content ID or slug} {--prompt-version=} {--provider=} {--model=}', function () {
     $provider = $this->option('provider');
     if (is_string($provider) && $provider !== '') {
         config()->set('ai.provider', $provider);
@@ -50,9 +50,16 @@ Artisan::command('content:generate-summary {content : Content ID or slug} {--pro
     /** @var ContentSummaryGenerator $generator */
     $generator = app(ContentSummaryGenerator::class);
     try {
+        $generationOptions = [];
+
+        if (is_string($this->option('model')) && $this->option('model') !== '') {
+            $generationOptions['model'] = (string) $this->option('model');
+        }
+
         $summary = $generator->generateForContent(
             $content,
             $this->option('prompt-version') ?: null,
+            $generationOptions,
         );
     } catch (Throwable $exception) {
         $this->error('Summary generation failed: '.$exception->getMessage());
