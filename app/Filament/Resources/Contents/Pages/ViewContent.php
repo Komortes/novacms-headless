@@ -6,16 +6,22 @@ use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\ContentSummaryGenerator;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Icons\Heroicon;
-use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Throwable;
 
-class EditContent extends EditRecord
+class ViewContent extends ViewRecord
 {
     protected static string $resource = ContentResource::class;
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        return 'Review generated AI output and run regeneration when content changes.';
+    }
 
     protected function getHeaderActions(): array
     {
@@ -46,7 +52,7 @@ class EditContent extends EditRecord
                         ->success()
                         ->send();
                 }),
-            DeleteAction::make(),
+            EditAction::make(),
         ];
     }
 }

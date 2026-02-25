@@ -14,6 +14,8 @@ class ContentOverviewWidget extends StatsOverviewWidget
 {
     protected ?string $heading = 'NovaCMS Overview';
 
+    protected ?string $description = 'Create or update content, then run "Generate summary" from Content table actions.';
+
     protected ?string $pollingInterval = '15s';
 
     /**
@@ -52,4 +54,3 @@ class ContentOverviewWidget extends StatsOverviewWidget
         ];
     }
 }
-
