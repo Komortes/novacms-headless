@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\AI\AiProviderFactory;
+use App\AI\Contracts\AiProviderInterface;
 use App\Models\Content;
 use App\Observers\ContentObserver;
 use App\Services\PromptRegistry;
@@ -15,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(PromptRegistry::class);
+        $this->app->singleton(AiProviderFactory::class);
+        $this->app->bind(AiProviderInterface::class, fn ($app) => $app->make(AiProviderFactory::class)->make());
     }
 
     /**

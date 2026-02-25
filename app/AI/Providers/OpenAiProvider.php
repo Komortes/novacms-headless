@@ -1,0 +1,84 @@
+<?php
+
+namespace App\AI\Providers;
+
+use App\AI\Contracts\AiProviderInterface;
+use App\AI\Data\AiGenerationResult;
+use App\AI\Exceptions\AiProviderException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Http\Client\RequestException;
+
+class OpenAiProvider implements AiProviderInterface
+{
+    public function __construct(
+        private readonly HttpFactory $http,
+        private readonly string $baseUrl,
+        private readonly ?string $apiKey,
+        private readonly string $defaultModel,
+        private readonly int $timeout,
+    ) {
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function generate(string $prompt, array $options = []): AiGenerationResult
+    {
+        if (blank($this->apiKey)) {
+            throw new AiProviderException('OPENAI_API_KEY is not configured.');
+        }
+
+        $model = (string) ($options['model'] ?? $this->defaultModel);
+        $body = [
+            'model' => $model,
+            'input' => $prompt,
+        ];
+
+        if (isset($options['instructions'])) {
+            $body['instructions'] = $options['instructions'];
+        }
+
+        if (isset($options['temperature'])) {
+            $body['temperature'] = $options['temperature'];
+        }
+
+        try {
+            $response = $this->http
+                ->baseUrl(rtrim($this->baseUrl, '/'))
+                ->timeout($this->timeout)
+                ->acceptJson()
+                ->withToken($this->apiKey)
+                ->post('/responses', $body)
+                ->throw();
+        } catch (RequestException|ConnectionException $exception) {
+            throw new AiProviderException(
+                'OpenAI request failed: '.$exception->getMessage(),
+                previous: $exception,
+            );
+        }
+
+        $data = $response->json();
+        $text = (string) data_get($data, 'output_text', '');
+
+        if ($text === '') {
+            $outputTextItem = collect((array) data_get($data, 'output', []))
+                ->flatMap(fn ($item) => (array) data_get($item, 'content', []))
+                ->firstWhere('type', 'output_text');
+
+            $text = (string) data_get($outputTextItem, 'text', '');
+        }
+
+        if ($text === '') {
+            throw new AiProviderException('OpenAI response does not contain output text.');
+        }
+
+        return new AiGenerationResult(
+            text: $text,
+            model: (string) data_get($data, 'model', $model),
+            tokensIn: data_get($data, 'usage.input_tokens') !== null ? (int) data_get($data, 'usage.input_tokens') : null,
+            tokensOut: data_get($data, 'usage.output_tokens') !== null ? (int) data_get($data, 'usage.output_tokens') : null,
+            raw: is_array($data) ? $data : [],
+        );
+    }
+}
