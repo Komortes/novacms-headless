@@ -1,0 +1,180 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\AiSetting;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
+
+class AiSettingsManager
+{
+    /**
+     * @return array<string, string>
+     */
+    public function providerOptions(): array
+    {
+        return [
+            'ollama' => 'Ollama (local)',
+            'openai' => 'OpenAI-compatible',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function modelOptions(string $provider): array
+    {
+        if (! array_key_exists($provider, $this->providerOptions())) {
+            return [];
+        }
+
+        $options = [];
+
+        foreach ((array) config("ai.providers.{$provider}.available_models", []) as $model) {
+            if (! is_string($model) || trim($model) === '') {
+                continue;
+            }
+
+            $options[$model] = $model;
+        }
+
+        $configuredModel = trim((string) config("ai.providers.{$provider}.model", ''));
+        if ($configuredModel !== '' && ! array_key_exists($configuredModel, $options)) {
+            $options = [$configuredModel => $configuredModel] + $options;
+        }
+
+        return $options;
+    }
+
+    public function getSettings(): ?AiSetting
+    {
+        if (! $this->settingsTableExists()) {
+            return null;
+        }
+
+        return AiSetting::query()->find(1);
+    }
+
+    public function hasStoredOpenAiKey(): bool
+    {
+        return filled($this->getSettings()?->openai_api_key);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function save(array $data): AiSetting
+    {
+        $settings = $this->settingsTableExists()
+            ? AiSetting::query()->firstOrNew(['id' => 1])
+            : new AiSetting(['id' => 1]);
+
+        $settings->forceFill([
+            'default_provider' => $this->normalizeProvider((string) Arr::get($data, 'default_provider', config('ai.provider', 'ollama'))),
+            'ollama_base_url' => $this->normalizeNullableString(Arr::get($data, 'ollama_base_url')),
+            'ollama_model' => $this->normalizeNullableString(Arr::get($data, 'ollama_model')),
+            'ollama_timeout' => $this->normalizeNullableInt(Arr::get($data, 'ollama_timeout')),
+            'openai_base_url' => $this->normalizeNullableString(Arr::get($data, 'openai_base_url')),
+            'openai_model' => $this->normalizeNullableString(Arr::get($data, 'openai_model')),
+            'openai_timeout' => $this->normalizeNullableInt(Arr::get($data, 'openai_timeout')),
+        ]);
+
+        if (array_key_exists('openai_api_key', $data) && filled($data['openai_api_key'])) {
+            $settings->openai_api_key = trim((string) $data['openai_api_key']);
+        }
+
+        if (Arr::get($data, 'clear_openai_api_key') === true) {
+            $settings->openai_api_key = null;
+        }
+
+        $settings->save();
+
+        $this->applyConfigOverrides($settings);
+
+        return $settings;
+    }
+
+    public function applyConfigOverrides(?AiSetting $settings = null): void
+    {
+        $settings ??= $this->getSettings();
+
+        if (! $settings) {
+            return;
+        }
+
+        $defaultProvider = $this->normalizeProvider((string) $settings->default_provider);
+        config()->set('ai.provider', $defaultProvider);
+
+        $this->applyProviderOverrides('ollama', [
+            'base_url' => $settings->ollama_base_url,
+            'model' => $settings->ollama_model,
+            'timeout' => $settings->ollama_timeout,
+        ]);
+
+        $this->applyProviderOverrides('openai', [
+            'base_url' => $settings->openai_base_url,
+            'api_key' => $settings->openai_api_key,
+            'model' => $settings->openai_model,
+            'timeout' => $settings->openai_timeout,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function applyProviderOverrides(string $provider, array $overrides): void
+    {
+        foreach ($overrides as $key => $value) {
+            if (is_string($value)) {
+                $value = trim($value);
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            config()->set("ai.providers.{$provider}.{$key}", $value);
+        }
+    }
+
+    private function normalizeProvider(string $provider): string
+    {
+        return array_key_exists($provider, $this->providerOptions()) ? $provider : 'ollama';
+    }
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        if (! is_scalar($value)) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private function normalizeNullableInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (int) $value;
+
+        return $normalized > 0 ? $normalized : null;
+    }
+
+    private function settingsTableExists(): bool
+    {
+        try {
+            return Schema::hasTable('ai_settings');
+        } catch (Throwable) {
+            return false;
+        }
+    }
+}

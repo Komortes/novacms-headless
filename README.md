@@ -7,6 +7,8 @@ It stores and serves structured content through APIs and processes AI tasks asyn
 
 - content management for `Post` and `Page`
 - async AI summarization pipeline
+- per-run provider/model selection in admin actions
+- central AI settings page for provider defaults and API credentials
 - real-time generation status updates
 - semantic search with vector embeddings
 - versioned prompt management for controlled AI outputs
@@ -148,7 +150,7 @@ REVERB_SCHEME=http
 
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.1
+OLLAMA_MODEL=qwen2.5:1.5b
 ```
 
 ## Run Locally
@@ -170,13 +172,14 @@ php artisan reverb:start
 Pull model in Ollama:
 
 ```bash
-docker compose exec ollama ollama pull llama3.1
+docker compose exec ollama ollama pull qwen2.5:1.5b
 ```
 
 ## API Endpoints
 
 - GraphQL: `/graphql`
 - Admin panel: `/admin`
+- AI settings page: `/admin/settings/ai`
 
 ## Current Development Focus
 

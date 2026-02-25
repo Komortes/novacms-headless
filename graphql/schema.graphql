@@ -104,6 +104,11 @@ type Mutation {
         locale: String
         status: ContentStatus
     ): Content @update(model: "App\\Models\\Content")
+
+    generateContentSummary(
+        content_id: ID!
+        prompt_version: String
+    ): ContentAiSummary @field(resolver: "App\\GraphQL\\Mutations\\GenerateContentSummaryMutation")
 }
 
 type User {
