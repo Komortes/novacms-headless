@@ -22,6 +22,7 @@ class ContentInfolist
                     ->description('Content metadata and current publication state.')
                     ->columns(4)
                     ->columnSpan(1)
+                    ->extraAttributes(['class' => 'h-full'])
                     ->components([
                         TextEntry::make('title')->columnSpanFull(),
                         TextEntry::make('slug')
@@ -54,9 +55,10 @@ class ContentInfolist
                             ->columnSpanFull(),
                     ]),
                 Section::make('AI Summary')
-                    ->description('Generated asynchronously from prompt templates and current content hash.')
+                    ->description('Generation status, provider metadata and diagnostics.')
                     ->columns(2)
                     ->columnSpan(1)
+                    ->extraAttributes(['class' => 'h-full'])
                     ->components([
                         TextEntry::make('summary.status')
                             ->label('Summary status')
@@ -80,34 +82,44 @@ class ContentInfolist
                         TextEntry::make('summary.tokens_out')
                             ->label('Tokens out')
                             ->placeholder('n/a'),
+                        TextEntry::make('summary.generation_ms')
+                            ->label('Latency')
+                            ->formatStateUsing(fn (mixed $state): string => is_numeric($state) ? ((int) $state).' ms' : 'n/a')
+                            ->placeholder('n/a'),
+                        TextEntry::make('summary.last_error')
+                            ->label('Last error')
+                            ->placeholder('No errors')
+                            ->lineClamp(3)
+                            ->color('danger')
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Generated Output')
+                    ->description('Structured fields produced by the active prompt and selected model.')
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->components([
                         TextEntry::make('summary.summary_tldr')
                             ->label('TL;DR')
-                            ->lineClamp(4)
+                            ->lineClamp(5)
                             ->placeholder('No summary generated yet.')
                             ->columnSpanFull(),
                         TextEntry::make('summary.summary_bullets')
                             ->label('Bullets')
                             ->bulleted()
                             ->listWithLineBreaks()
-                            ->limitList(6)
+                            ->limitList(8)
                             ->expandableLimitedList()
                             ->placeholder('No bullets generated yet.')
-                            ->columnSpanFull(),
+                            ->columnSpan(1),
                         TextEntry::make('summary.summary_meta_description')
                             ->label('Meta description')
-                            ->lineClamp(3)
+                            ->lineClamp(5)
                             ->placeholder('No meta description generated yet.')
-                            ->columnSpanFull(),
+                            ->columnSpan(1),
                         TextEntry::make('summary.summary_tags')
                             ->label('Tags')
                             ->badge()
                             ->placeholder('No tags generated yet.')
-                            ->columnSpanFull(),
-                        TextEntry::make('summary.last_error')
-                            ->label('Last error')
-                            ->placeholder('No errors')
-                            ->lineClamp(3)
-                            ->color('danger')
                             ->columnSpanFull(),
                     ]),
                 Section::make('FAQ')
@@ -134,6 +146,58 @@ class ContentInfolist
                                     ->lineClamp(5),
                             ]),
                     ]),
+                Section::make('Run Timeline')
+                    ->description('Latest queue and generation events for this content.')
+                    ->collapsible()
+                    ->collapsed()
+                    ->columnSpanFull()
+                    ->components([
+                        RepeatableEntry::make('summary_events_timeline')
+                            ->label(' ')
+                            ->state(fn ($record): array => $record
+                                ->summaryEvents()
+                                ->latest('id')
+                                ->limit(12)
+                                ->get()
+                                ->map(fn ($event): array => [
+                                    'event' => (string) $event->event,
+                                    'created_at' => $event->created_at,
+                                    'provider' => (string) ($event->provider ?? 'n/a'),
+                                    'model' => (string) ($event->model ?? 'n/a'),
+                                    'wait_ms' => is_numeric($event->wait_ms) ? ((int) $event->wait_ms).' ms' : 'n/a',
+                                    'duration_ms' => is_numeric($event->duration_ms) ? ((int) $event->duration_ms).' ms' : 'n/a',
+                                    'message' => (string) ($event->message ?? ''),
+                                ])
+                                ->all())
+                            ->placeholder('No timeline events yet.')
+                            ->schema([
+                                TextEntry::make('event')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'completed' => 'success',
+                                        'failed' => 'danger',
+                                        'started' => 'info',
+                                        'queued' => 'warning',
+                                        'cancelled' => 'gray',
+                                        'skipped' => 'gray',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('created_at')
+                                    ->label('When')
+                                    ->since(),
+                                TextEntry::make('provider'),
+                                TextEntry::make('model')
+                                    ->limit(24),
+                                TextEntry::make('wait_ms')
+                                    ->label('Queue wait'),
+                                TextEntry::make('duration_ms')
+                                    ->label('Run time'),
+                                TextEntry::make('message')
+                                    ->placeholder(' ')
+                                    ->lineClamp(2)
+                                    ->columnSpanFull(),
+                            ]),
+                    ]),
                 Section::make('Source Markdown')
                     ->description('Original source used for summary generation.')
                     ->collapsible()
@@ -142,7 +206,7 @@ class ContentInfolist
                     ->components([
                         TextEntry::make('body')
                             ->markdown()
-                            ->prose()
+                            ->extraAttributes(['class' => 'max-w-none'])
                             ->columnSpanFull(),
                     ]),
             ]);

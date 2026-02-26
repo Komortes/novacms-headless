@@ -6,13 +6,13 @@ use App\Enums\SummaryStatus;
 use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
-use App\Services\ContentSummaryGenerator;
+use App\Services\ContentSummaryDispatcher;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
@@ -25,6 +25,11 @@ class EditContent extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('queueCenter')
+                ->label('Queue')
+                ->icon(Heroicon::Clock)
+                ->color('gray')
+                ->url(\App\Filament\Pages\QueueCenter::getUrl()),
             Action::make('faqInfo')
                 ->label('FAQ & info')
                 ->icon(Heroicon::QuestionMarkCircle)
@@ -39,6 +44,8 @@ class EditContent extends EditRecord
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)
                 ->color('info')
+                ->modalHeading('Generate summary')
+                ->modalSubmitActionLabel('Queue generation')
                 ->schema([
                     Select::make('provider')
                         ->label('Provider')
@@ -46,6 +53,29 @@ class EditContent extends EditRecord
                         ->default(fn (): string => (string) config('ai.provider', 'ollama'))
                         ->required()
                         ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                            $profile = (string) ($get('generation_profile') ?: 'balanced');
+                            $model = app(AiSettingsManager::class)->modelForProfile((string) $state, $profile);
+
+                            if ($model !== null) {
+                                $set('model', $model);
+                            }
+                        })
+                        ->native(false),
+                    Select::make('generation_profile')
+                        ->label('Preset')
+                        ->options(app(AiSettingsManager::class)->profileOptions())
+                        ->default('balanced')
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                            $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                            $model = app(AiSettingsManager::class)->modelForProfile($provider, is_string($state) ? $state : null);
+
+                            if ($model !== null) {
+                                $set('model', $model);
+                            }
+                        })
                         ->native(false),
                     Select::make('model')
                         ->label('Model')
@@ -54,13 +84,15 @@ class EditContent extends EditRecord
 
                             return app(AiSettingsManager::class)->modelOptions($provider);
                         })
+                        ->default(function (Get $get): ?string {
+                            $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                            $profile = (string) ($get('generation_profile') ?: 'balanced');
+
+                            return app(AiSettingsManager::class)->modelForProfile($provider, $profile);
+                        })
                         ->searchable()
                         ->native(false)
-                        ->helperText('Optional: leave empty to use provider default model.'),
-                    TextInput::make('custom_model')
-                        ->label('Custom model id')
-                        ->placeholder('e.g. qwen2.5:3b')
-                        ->helperText('If filled, this value overrides the model select.'),
+                        ->helperText('Preset auto-fills model.'),
                 ])
                 ->action(function (array $data): void {
                     /** @var Content $record */
@@ -68,21 +100,17 @@ class EditContent extends EditRecord
 
                     try {
                         $provider = (string) ($data['provider'] ?? config('ai.provider', 'ollama'));
-                        $customModel = trim((string) ($data['custom_model'] ?? ''));
                         $selectedModel = trim((string) ($data['model'] ?? ''));
-                        $model = $customModel !== '' ? $customModel : $selectedModel;
+                        $model = $selectedModel;
 
-                        config()->set('ai.provider', $provider);
-
-                        $options = [];
-                        if ($model !== '') {
-                            $options['model'] = $model;
-                        }
-
-                        app(ContentSummaryGenerator::class)->generateForContent($record, options: $options);
+                        app(ContentSummaryDispatcher::class)->dispatch(
+                            content: $record,
+                            provider: $provider,
+                            model: $model !== '' ? $model : null,
+                        );
                     } catch (Throwable $exception) {
                         Notification::make()
-                            ->title('Summary generation failed')
+                            ->title('Failed to queue generation')
                             ->body(Str::limit($exception->getMessage(), 200))
                             ->danger()
                             ->send();
@@ -91,8 +119,8 @@ class EditContent extends EditRecord
                     }
 
                     Notification::make()
-                        ->title('Summary generated')
-                        ->body('Summary refreshed with selected provider/model.')
+                        ->title('Generation queued')
+                        ->body('Summary will update automatically when worker finishes.')
                         ->success()
                         ->send();
                 })

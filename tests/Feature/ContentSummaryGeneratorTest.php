@@ -9,6 +9,7 @@ use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
+use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryGenerator;
 use Database\Seeders\PromptSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,8 @@ class ContentSummaryGeneratorTest extends TestCase
         $this->assertSame('1.0.0', $summary->prompt_version);
         $this->assertSame(120, $summary->tokens_in);
         $this->assertSame(40, $summary->tokens_out);
+        $this->assertNotNull($summary->generation_ms);
+        $this->assertGreaterThanOrEqual(0, $summary->generation_ms);
         $this->assertSame(
             [
                 ['question' => 'What?', 'answer' => 'Answer'],
@@ -72,6 +75,11 @@ class ContentSummaryGeneratorTest extends TestCase
             ],
             $summary->summary_faq,
         );
+
+        $this->assertDatabaseHas('content_ai_summary_events', [
+            'content_id' => $content->id,
+            'event' => 'completed',
+        ]);
     }
 
     public function test_it_marks_summary_as_failed_on_invalid_ai_response(): void
@@ -111,7 +119,99 @@ class ContentSummaryGeneratorTest extends TestCase
             $this->assertNotNull($summary);
             $this->assertSame(SummaryStatus::FAILED, $summary?->status);
             $this->assertNotNull($summary?->last_error);
+            $this->assertDatabaseHas('content_ai_summary_events', [
+                'content_id' => $content->id,
+                'event' => 'failed',
+            ]);
         }
     }
-}
 
+    public function test_it_uses_map_reduce_pipeline_for_long_content(): void
+    {
+        $this->seed(PromptSeeder::class);
+        config()->set('ai.map_reduce.enabled', true);
+        config()->set('ai.map_reduce.min_body_chars', 600);
+        config()->set('ai.map_reduce.chunk_chars', 700);
+        config()->set('ai.map_reduce.max_chunks', 2);
+
+        $fakeProvider = new class implements AiProviderInterface
+        {
+            public int $calls = 0;
+
+            public function generate(string $prompt, array $options = []): AiGenerationResult
+            {
+                $this->calls++;
+
+                if ($this->calls === 1) {
+                    return new AiGenerationResult(
+                        text: json_encode([
+                            'key_points' => ['Map point A'],
+                            'candidate_faq' => [['question' => 'Q1', 'answer' => 'A1']],
+                            'candidate_tags' => ['tag-a'],
+                        ]) ?: '{}',
+                        model: 'map-model',
+                        tokensIn: 10,
+                        tokensOut: 6,
+                    );
+                }
+
+                if ($this->calls === 2) {
+                    return new AiGenerationResult(
+                        text: json_encode([
+                            'key_points' => ['Map point B'],
+                            'candidate_faq' => [['question' => 'Q2', 'answer' => 'A2']],
+                            'candidate_tags' => ['tag-b'],
+                        ]) ?: '{}',
+                        model: 'map-model',
+                        tokensIn: 11,
+                        tokensOut: 7,
+                    );
+                }
+
+                return new AiGenerationResult(
+                    text: json_encode([
+                        'summary_tldr' => 'Reduced TLDR output',
+                        'summary_bullets' => ['Bullet A', 'Bullet B'],
+                        'summary_meta_description' => 'Reduced meta description',
+                        'summary_faq' => [['question' => 'Q final', 'answer' => 'A final']],
+                        'summary_tags' => ['tag-a', 'tag-b'],
+                    ]) ?: '{}',
+                    model: 'reduce-model',
+                    tokensIn: 20,
+                    tokensOut: 12,
+                );
+            }
+        };
+
+        app()->instance(AiProviderInterface::class, $fakeProvider);
+
+        $body = str_repeat("Paragraph with enough text for map reduce chunking.\n\n", 40);
+
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'map-reduce-summary',
+            'title' => 'Map Reduce Summary',
+            'body' => $body,
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        $summary = app(ContentSummaryGenerator::class)->generateForContent($content);
+
+        $this->assertSame(3, $fakeProvider->calls);
+        $this->assertSame('reduce-model', $summary->model);
+        $this->assertSame('mr:1.0.0+1.0.0', $summary->prompt_version);
+        $this->assertSame(41, $summary->tokens_in);
+        $this->assertSame(25, $summary->tokens_out);
+
+        $event = ContentAiSummaryEvent::query()
+            ->where('content_id', $content->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($event);
+        $this->assertSame('completed', $event?->event);
+        $this->assertSame('map-reduce', data_get($event?->meta, 'pipeline'));
+        $this->assertSame(2, data_get($event?->meta, 'chunks'));
+    }
+}

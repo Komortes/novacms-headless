@@ -30,7 +30,7 @@ class ContentResource extends Resource
 
     protected static ?string $navigationLabel = 'Content';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'CMS';
+    protected static string|\UnitEnum|null $navigationGroup = 'Workspace';
 
     protected static ?int $navigationSort = 1;
 
