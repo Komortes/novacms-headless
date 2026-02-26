@@ -10,6 +10,36 @@ use Throwable;
 class AiSettingsManager
 {
     /**
+     * @return array<string, array{label: string, models: array<string, string>}>
+     */
+    private function generationProfiles(): array
+    {
+        return [
+            'fast' => [
+                'label' => 'Fast (draft checks)',
+                'models' => [
+                    'ollama' => 'qwen2.5:0.5b',
+                    'openai' => 'gpt-4.1-mini',
+                ],
+            ],
+            'balanced' => [
+                'label' => 'Balanced (default)',
+                'models' => [
+                    'ollama' => 'qwen2.5:1.5b',
+                    'openai' => 'gpt-4o-mini',
+                ],
+            ],
+            'quality' => [
+                'label' => 'Quality (deeper output)',
+                'models' => [
+                    'ollama' => 'llama3.2:3b',
+                    'openai' => 'gpt-4.1',
+                ],
+            ],
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     public function providerOptions(): array
@@ -45,6 +75,33 @@ class AiSettingsManager
         }
 
         return $options;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function profileOptions(): array
+    {
+        $options = [];
+
+        foreach ($this->generationProfiles() as $key => $profile) {
+            $options[$key] = $profile['label'];
+        }
+
+        return $options;
+    }
+
+    public function modelForProfile(string $provider, ?string $profile): ?string
+    {
+        $resolvedProfile = $this->generationProfiles()[$profile ?? ''] ?? null;
+
+        if (! $resolvedProfile) {
+            return null;
+        }
+
+        $model = $resolvedProfile['models'][$provider] ?? null;
+
+        return is_string($model) && trim($model) !== '' ? $model : null;
     }
 
     public function getSettings(): ?AiSetting

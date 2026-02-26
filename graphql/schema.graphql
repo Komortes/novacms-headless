@@ -47,6 +47,7 @@ type ContentAiSummary {
     prompt_version: String
     tokens_in: Int
     tokens_out: Int
+    generation_ms: Int
     last_error: String
     content: Content! @belongsTo
     created_at: DateTime!

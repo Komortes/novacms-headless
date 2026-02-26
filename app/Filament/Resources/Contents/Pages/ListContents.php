@@ -69,6 +69,11 @@ class ListContents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('queueCenter')
+                ->label('Queue')
+                ->icon(Heroicon::Clock)
+                ->url(\App\Filament\Pages\QueueCenter::getUrl())
+                ->color('gray'),
             Action::make('faqInfo')
                 ->label('FAQ & info')
                 ->icon(Heroicon::QuestionMarkCircle)

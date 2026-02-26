@@ -2,8 +2,10 @@
 
 namespace App\Observers;
 
+use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
+use App\Services\ContentPublishQualityGate;
 
 class ContentObserver
 {
@@ -26,6 +28,23 @@ class ContentObserver
         $this->markSummaryAsPending($content);
     }
 
+    public function updating(Content $content): void
+    {
+        if (! $content->isDirty('status')) {
+            return;
+        }
+
+        $targetStatus = $content->status instanceof ContentStatus
+            ? $content->status
+            : ContentStatus::tryFrom((string) $content->status);
+
+        if ($targetStatus !== ContentStatus::PUBLISHED) {
+            return;
+        }
+
+        app(ContentPublishQualityGate::class)->assertCanPublish($content);
+    }
+
     private function markSummaryAsPending(Content $content): void
     {
         $content->summary()->updateOrCreate(
@@ -41,6 +60,7 @@ class ContentObserver
                 'prompt_version' => null,
                 'tokens_in' => null,
                 'tokens_out' => null,
+                'generation_ms' => null,
                 'last_error' => null,
             ],
         );

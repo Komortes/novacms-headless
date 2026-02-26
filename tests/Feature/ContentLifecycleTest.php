@@ -7,6 +7,7 @@ use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class ContentLifecycleTest extends TestCase
@@ -83,7 +84,11 @@ class ContentLifecycleTest extends TestCase
         ]);
 
         $content->summary()->update([
-            'summary_tldr' => 'Ready summary',
+            'summary_tldr' => 'Ready summary with enough context',
+            'summary_bullets' => ['Bullet one', 'Bullet two'],
+            'summary_meta_description' => 'Short valid meta description',
+            'summary_faq' => [['question' => 'Q', 'answer' => 'A']],
+            'summary_tags' => ['tag-1', 'tag-2'],
             'status' => SummaryStatus::READY,
         ]);
 
@@ -94,6 +99,39 @@ class ContentLifecycleTest extends TestCase
         $summary = $content->summary()->first();
 
         $this->assertSame(SummaryStatus::READY, $summary?->status);
-        $this->assertSame('Ready summary', $summary?->summary_tldr);
+        $this->assertSame('Ready summary with enough context', $summary?->summary_tldr);
+    }
+
+    public function test_publish_is_blocked_when_quality_gate_fails(): void
+    {
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'blocked-publish',
+            'title' => 'Blocked Publish',
+            'body' => 'Needs quality gate',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        $content->summary()->update([
+            'summary_tldr' => 'Too short',
+            'summary_bullets' => ['Only one bullet'],
+            'summary_meta_description' => null,
+            'summary_faq' => [],
+            'summary_tags' => ['one'],
+            'status' => SummaryStatus::READY,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Regenerate summary');
+
+        try {
+            $content->update([
+                'status' => ContentStatus::PUBLISHED,
+            ]);
+        } finally {
+            $content->refresh();
+            $this->assertSame(ContentStatus::DRAFT, $content->status);
+        }
     }
 }

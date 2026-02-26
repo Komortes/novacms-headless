@@ -34,9 +34,9 @@ class AiSettings extends Page
 
     protected static ?string $navigationLabel = 'AI Settings';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'System';
+    protected static string|\UnitEnum|null $navigationGroup = 'Workspace';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $title = 'AI Settings';
 

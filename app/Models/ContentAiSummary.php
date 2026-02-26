@@ -6,6 +6,7 @@ use App\Enums\SummaryStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ContentAiSummary extends Model
 {
@@ -26,6 +27,7 @@ class ContentAiSummary extends Model
         'prompt_version',
         'tokens_in',
         'tokens_out',
+        'generation_ms',
         'last_error',
     ];
 
@@ -39,6 +41,7 @@ class ContentAiSummary extends Model
             'summary_faq' => 'array',
             'summary_tags' => 'array',
             'status' => SummaryStatus::class,
+            'generation_ms' => 'integer',
         ];
     }
 
@@ -46,5 +49,9 @@ class ContentAiSummary extends Model
     {
         return $this->belongsTo(Content::class);
     }
-}
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(ContentAiSummaryEvent::class)->orderByDesc('created_at');
+    }
+}
