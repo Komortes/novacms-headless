@@ -65,6 +65,11 @@ type Prompt {
     updated_at: DateTime!
 }
 
+type SemanticContentMatch {
+    content: Content!
+    score: Float!
+}
+
 type Query {
     user(
       id: ID @eq @rules(apply: ["prohibits:email", "required_without:email"])
@@ -84,6 +89,10 @@ type Query {
     prompt(id: ID! @eq): Prompt @find(model: "App\\Models\\Prompt")
     prompts: [Prompt!]! @paginate(model: "App\\Models\\Prompt", defaultCount: 20)
     activePrompt(name: String!, version: String): Prompt @field(resolver: "App\\GraphQL\\Queries\\ActivePromptQuery")
+    semanticSearch(query: String!, limit: Int = 10, locale: String): [SemanticContentMatch!]!
+        @field(resolver: "App\\GraphQL\\Queries\\SemanticSearchQuery")
+    relatedContent(content_id: ID!, limit: Int = 5): [SemanticContentMatch!]!
+        @field(resolver: "App\\GraphQL\\Queries\\RelatedContentQuery")
 }
 
 type Mutation {

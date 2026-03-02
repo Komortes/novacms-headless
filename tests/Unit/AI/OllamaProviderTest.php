@@ -92,4 +92,24 @@ class OllamaProviderTest extends TestCase
 
         $provider->generate('Summarize this');
     }
+
+    public function test_embed_maps_ollama_embedding_response(): void
+    {
+        Http::fake([
+            'http://ollama.local/api/embed' => Http::response([
+                'embeddings' => [[0.1, 0.2, 0.3]],
+            ], 200),
+        ]);
+
+        $provider = new OllamaProvider(
+            app(HttpFactory::class),
+            'http://ollama.local',
+            'llama3.1',
+            10,
+        );
+
+        $vector = $provider->embed('hello', ['model' => 'nomic-embed-text']);
+
+        $this->assertSame([0.1, 0.2, 0.3], $vector);
+    }
 }

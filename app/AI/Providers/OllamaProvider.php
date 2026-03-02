@@ -83,4 +83,58 @@ class OllamaProvider implements AiProviderInterface
             raw: $data,
         );
     }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return list<float>
+     */
+    public function embed(string $input, array $options = []): array
+    {
+        $model = (string) ($options['model'] ?? config('ai.embeddings.model', $this->defaultModel));
+        $requestBody = [
+            'model' => $model,
+            'input' => $input,
+        ];
+
+        if (isset($options['truncate'])) {
+            $requestBody['truncate'] = (bool) $options['truncate'];
+        }
+
+        try {
+            $response = $this->http
+                ->baseUrl(rtrim($this->baseUrl, '/'))
+                ->timeout($this->timeout)
+                ->acceptJson()
+                ->post('/api/embed', $requestBody)
+                ->throw();
+        } catch (RequestException|ConnectionException $exception) {
+            throw new AiProviderException(
+                'Ollama embedding request failed: '.$exception->getMessage(),
+                previous: $exception,
+            );
+        }
+
+        $data = $response->json();
+        $candidate = data_get($data, 'embeddings.0');
+
+        if (! is_array($candidate)) {
+            throw new AiProviderException('Ollama embedding response is missing embeddings[0].');
+        }
+
+        $vector = [];
+
+        foreach ($candidate as $value) {
+            if (! is_numeric($value)) {
+                continue;
+            }
+
+            $vector[] = (float) $value;
+        }
+
+        if ($vector === []) {
+            throw new AiProviderException('Ollama embedding response is empty.');
+        }
+
+        return $vector;
+    }
 }

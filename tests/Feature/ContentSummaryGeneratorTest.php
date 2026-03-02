@@ -44,6 +44,11 @@ class ContentSummaryGeneratorTest extends TestCase
                         tokensOut: 40,
                     );
                 }
+
+                public function embed(string $input, array $options = []): array
+                {
+                    return [0.1, 0.2, 0.3];
+                }
             };
         });
 
@@ -95,6 +100,11 @@ class ContentSummaryGeneratorTest extends TestCase
                         text: 'this is not json',
                         model: 'fake-model',
                     );
+                }
+
+                public function embed(string $input, array $options = []): array
+                {
+                    return [0.1, 0.2, 0.3];
                 }
             };
         });
@@ -180,6 +190,11 @@ class ContentSummaryGeneratorTest extends TestCase
                     tokensIn: 20,
                     tokensOut: 12,
                 );
+            }
+
+            public function embed(string $input, array $options = []): array
+            {
+                return [0.1, 0.2, 0.3];
             }
         };
 
