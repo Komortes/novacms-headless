@@ -81,4 +81,59 @@ class OpenAiProvider implements AiProviderInterface
             raw: is_array($data) ? $data : [],
         );
     }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return list<float>
+     */
+    public function embed(string $input, array $options = []): array
+    {
+        if (blank($this->apiKey)) {
+            throw new AiProviderException('OPENAI_API_KEY is not configured.');
+        }
+
+        $model = (string) ($options['model'] ?? config('ai.embeddings.model', $this->defaultModel));
+        $body = [
+            'model' => $model,
+            'input' => $input,
+        ];
+
+        try {
+            $response = $this->http
+                ->baseUrl(rtrim($this->baseUrl, '/'))
+                ->timeout($this->timeout)
+                ->acceptJson()
+                ->withToken($this->apiKey)
+                ->post('/embeddings', $body)
+                ->throw();
+        } catch (RequestException|ConnectionException $exception) {
+            throw new AiProviderException(
+                'OpenAI embedding request failed: '.$exception->getMessage(),
+                previous: $exception,
+            );
+        }
+
+        $data = $response->json();
+        $candidate = data_get($data, 'data.0.embedding');
+
+        if (! is_array($candidate)) {
+            throw new AiProviderException('OpenAI embedding response is missing data[0].embedding.');
+        }
+
+        $vector = [];
+
+        foreach ($candidate as $value) {
+            if (! is_numeric($value)) {
+                continue;
+            }
+
+            $vector[] = (float) $value;
+        }
+
+        if ($vector === []) {
+            throw new AiProviderException('OpenAI embedding response is empty.');
+        }
+
+        return $vector;
+    }
 }

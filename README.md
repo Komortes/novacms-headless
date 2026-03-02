@@ -196,6 +196,34 @@ docker compose exec ollama ollama pull qwen2.5:1.5b
 - Admin panel: `/admin`
 - AI settings page: `/admin/settings/ai`
 
+### Semantic GraphQL Queries
+
+```graphql
+query {
+  semanticSearch(query: "headless cms with ai", limit: 5, locale: "en") {
+    score
+    content {
+      id
+      slug
+      title
+    }
+  }
+}
+```
+
+```graphql
+query {
+  relatedContent(content_id: 1, limit: 5) {
+    score
+    content {
+      id
+      slug
+      title
+    }
+  }
+}
+```
+
 ## Current Development Focus
 
 1. complete `contents` and `content_ai_summaries` migrations

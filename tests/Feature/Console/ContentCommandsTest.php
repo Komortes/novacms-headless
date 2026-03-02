@@ -60,6 +60,11 @@ class ContentCommandsTest extends TestCase
                         tokensOut: 11,
                     );
                 }
+
+                public function embed(string $input, array $options = []): array
+                {
+                    return [0.1, 0.2, 0.3];
+                }
             };
         });
 
@@ -105,6 +110,11 @@ class ContentCommandsTest extends TestCase
                         tokensIn: 1,
                         tokensOut: 1,
                     );
+                }
+
+                public function embed(string $input, array $options = []): array
+                {
+                    return [0.1, 0.2, 0.3];
                 }
             };
         });
