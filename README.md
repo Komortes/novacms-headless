@@ -117,6 +117,18 @@ Realtime status in admin/API consumers
 - `parameters`
 - `is_active`
 
+### `content_embeddings`
+- `content_id`
+- `source` (`body`, `summary`, etc.)
+- `chunk_index`
+- `content_hash`
+- `provider`
+- `model`
+- `dimensions`
+- `embedding` (`vector(n)` in PostgreSQL with pgvector)
+- `meta` (json)
+- timestamps
+
 ## Prompt and Model Governance
 
 - prompt templates are versioned in `prompts`
@@ -151,6 +163,9 @@ REVERB_SCHEME=http
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen2.5:1.5b
+AI_EMBEDDINGS_PROVIDER=ollama
+AI_EMBEDDINGS_MODEL=nomic-embed-text
+AI_EMBEDDINGS_DIMENSIONS=1024
 ```
 
 ## Run Locally
