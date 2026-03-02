@@ -10,6 +10,12 @@ return [
         'max_chunks' => (int) env('AI_MAP_REDUCE_MAX_CHUNKS', 12),
     ],
 
+    'embeddings' => [
+        'provider' => env('AI_EMBEDDINGS_PROVIDER', env('AI_PROVIDER', 'ollama')),
+        'model' => env('AI_EMBEDDINGS_MODEL', 'nomic-embed-text'),
+        'dimensions' => (int) env('AI_EMBEDDINGS_DIMENSIONS', 1024),
+    ],
+
     'providers' => [
         'ollama' => [
             'base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
