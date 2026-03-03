@@ -81,6 +81,7 @@ Realtime status in admin/API consumers
 - supported operations:
   - `semanticSearch(query)`
   - `relatedContent(contentId)`
+- embeddings are generated asynchronously on content create/update and can be backfilled via CLI
 
 ## Data Model
 
@@ -166,6 +167,9 @@ OLLAMA_MODEL=qwen2.5:1.5b
 AI_EMBEDDINGS_PROVIDER=ollama
 AI_EMBEDDINGS_MODEL=nomic-embed-text
 AI_EMBEDDINGS_DIMENSIONS=1024
+AI_EMBEDDINGS_CHUNK_CHARS=1200
+AI_EMBEDDINGS_MAX_CHUNKS=32
+AI_EMBEDDINGS_AUTO_DISPATCH=true
 ```
 
 ## Run Locally
@@ -188,6 +192,17 @@ Pull model in Ollama:
 
 ```bash
 docker compose exec ollama ollama pull qwen2.5:1.5b
+docker compose exec ollama ollama pull nomic-embed-text
+```
+
+Reindex embeddings:
+
+```bash
+# queue all content
+php artisan content:reindex-embeddings
+
+# sync single content by slug
+php artisan content:reindex-embeddings sample-post --sync
 ```
 
 ## API Endpoints

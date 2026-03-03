@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
+use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentPublishQualityGate;
 
 class ContentObserver
@@ -17,6 +18,7 @@ class ContentObserver
     public function created(Content $content): void
     {
         $this->markSummaryAsPending($content);
+        $this->dispatchEmbeddings($content);
     }
 
     public function updated(Content $content): void
@@ -26,6 +28,7 @@ class ContentObserver
         }
 
         $this->markSummaryAsPending($content);
+        $this->dispatchEmbeddings($content);
     }
 
     public function updating(Content $content): void
@@ -64,5 +67,14 @@ class ContentObserver
                 'last_error' => null,
             ],
         );
+    }
+
+    private function dispatchEmbeddings(Content $content): void
+    {
+        if (! (bool) config('ai.embeddings.auto_dispatch', true)) {
+            return;
+        }
+
+        app(ContentEmbeddingDispatcher::class)->dispatch($content);
     }
 }

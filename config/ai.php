@@ -14,6 +14,9 @@ return [
         'provider' => env('AI_EMBEDDINGS_PROVIDER', env('AI_PROVIDER', 'ollama')),
         'model' => env('AI_EMBEDDINGS_MODEL', 'nomic-embed-text'),
         'dimensions' => (int) env('AI_EMBEDDINGS_DIMENSIONS', 1024),
+        'chunk_chars' => (int) env('AI_EMBEDDINGS_CHUNK_CHARS', 1200),
+        'max_chunks' => (int) env('AI_EMBEDDINGS_MAX_CHUNKS', 32),
+        'auto_dispatch' => (bool) env('AI_EMBEDDINGS_AUTO_DISPATCH', true),
     ],
 
     'providers' => [
