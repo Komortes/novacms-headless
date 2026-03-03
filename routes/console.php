@@ -3,6 +3,8 @@
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Models\Content;
+use App\Services\ContentEmbeddingDispatcher;
+use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentSummaryGenerator;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -108,3 +110,93 @@ Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Pos
 
     return Command::SUCCESS;
 })->purpose('Create a sample content record for local AI summary testing');
+
+Artisan::command('content:reindex-embeddings {content? : Optional Content ID or slug} {--provider=} {--model=} {--sync}', function () {
+    $contentArgument = $this->argument('content');
+    $provider = $this->option('provider');
+    $model = $this->option('model');
+    $sync = (bool) $this->option('sync');
+
+    $query = Content::query()->orderBy('id');
+
+    if (is_string($contentArgument) && trim($contentArgument) !== '') {
+        $argument = trim($contentArgument);
+        $query->where(
+            ctype_digit($argument) ? 'id' : 'slug',
+            ctype_digit($argument) ? (int) $argument : $argument,
+        );
+    }
+
+    $contents = $query->get();
+
+    if ($contents->isEmpty()) {
+        $target = is_string($contentArgument) && trim($contentArgument) !== '' ? $contentArgument : 'all';
+        $this->error("No content found for [{$target}].");
+
+        return Command::FAILURE;
+    }
+
+    if (! $sync) {
+        /** @var ContentEmbeddingDispatcher $dispatcher */
+        $dispatcher = app(ContentEmbeddingDispatcher::class);
+
+        foreach ($contents as $content) {
+            $dispatcher->dispatch(
+                content: $content,
+                provider: is_string($provider) && $provider !== '' ? $provider : null,
+                model: is_string($model) && $model !== '' ? $model : null,
+            );
+        }
+
+        $this->info('Embedding reindex queued.');
+        $this->line('Queued items: '.$contents->count());
+
+        return Command::SUCCESS;
+    }
+
+    /** @var ContentEmbeddingGenerator $generator */
+    $generator = app(ContentEmbeddingGenerator::class);
+    $processed = 0;
+    $failed = 0;
+
+    foreach ($contents as $content) {
+        try {
+            $result = $generator->generateForContent(
+                content: $content,
+                provider: is_string($provider) && $provider !== '' ? $provider : null,
+                model: is_string($model) && $model !== '' ? $model : null,
+            );
+            $processed++;
+
+            $this->line(
+                sprintf(
+                    '#%d %s -> chunks=%d, deleted=%d, provider=%s, model=%s',
+                    $content->id,
+                    $content->slug,
+                    $result['chunks'],
+                    $result['deleted'],
+                    $result['provider'],
+                    $result['model'],
+                ),
+            );
+        } catch (Throwable $exception) {
+            $failed++;
+            $this->error(sprintf(
+                '#%d %s -> failed: %s',
+                $content->id,
+                $content->slug,
+                $exception->getMessage(),
+            ));
+        }
+    }
+
+    if ($failed > 0) {
+        $this->error("Embedding reindex finished with failures. processed={$processed}, failed={$failed}");
+
+        return Command::FAILURE;
+    }
+
+    $this->info("Embedding reindex completed. processed={$processed}");
+
+    return Command::SUCCESS;
+})->purpose('Reindex embeddings for one content or all content records');
