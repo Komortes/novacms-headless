@@ -52,6 +52,11 @@ class Content extends Model
         return $this->hasMany(ContentEmbedding::class)->orderBy('chunk_index');
     }
 
+    public function embeddingEvents(): HasMany
+    {
+        return $this->hasMany(ContentEmbeddingEvent::class)->orderByDesc('created_at');
+    }
+
     public function latestSummaryEvent(): HasOne
     {
         return $this->hasOne(ContentAiSummaryEvent::class)->latestOfMany('created_at');

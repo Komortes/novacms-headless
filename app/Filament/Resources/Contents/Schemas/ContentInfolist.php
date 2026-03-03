@@ -198,6 +198,55 @@ class ContentInfolist
                                     ->columnSpanFull(),
                             ]),
                     ]),
+                Section::make('Embeddings Timeline')
+                    ->description('Latest embedding queue and processing events for this content.')
+                    ->collapsible()
+                    ->collapsed()
+                    ->columnSpanFull()
+                    ->components([
+                        RepeatableEntry::make('embedding_events_timeline')
+                            ->label(' ')
+                            ->state(fn ($record): array => $record
+                                ->embeddingEvents()
+                                ->latest('id')
+                                ->limit(12)
+                                ->get()
+                                ->map(fn ($event): array => [
+                                    'event' => (string) $event->event,
+                                    'created_at' => $event->created_at,
+                                    'provider' => (string) ($event->provider ?? 'n/a'),
+                                    'model' => (string) ($event->model ?? 'n/a'),
+                                    'chunks' => is_numeric($event->chunks) ? (string) $event->chunks : 'n/a',
+                                    'dimensions' => is_numeric($event->dimensions) ? (string) $event->dimensions : 'n/a',
+                                    'message' => (string) ($event->message ?? ''),
+                                ])
+                                ->all())
+                            ->placeholder('No embedding events yet.')
+                            ->schema([
+                                TextEntry::make('event')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'completed' => 'success',
+                                        'failed' => 'danger',
+                                        'started' => 'info',
+                                        'queued' => 'warning',
+                                        'skipped' => 'gray',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('created_at')
+                                    ->label('When')
+                                    ->since(),
+                                TextEntry::make('provider'),
+                                TextEntry::make('model')
+                                    ->limit(24),
+                                TextEntry::make('chunks'),
+                                TextEntry::make('dimensions'),
+                                TextEntry::make('message')
+                                    ->placeholder(' ')
+                                    ->lineClamp(2)
+                                    ->columnSpanFull(),
+                            ]),
+                    ]),
                 Section::make('Source Markdown')
                     ->description('Original source used for summary generation.')
                     ->collapsible()

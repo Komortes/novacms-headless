@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AI\Contracts\AiProviderInterface;
 use App\AI\Exceptions\AiProviderException;
+use App\DomainEvents;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
@@ -18,6 +19,7 @@ class ContentSummaryGenerator
         private readonly AiProviderInterface $aiProvider,
         private readonly PromptRegistry $promptRegistry,
         private readonly ContentSummaryEventLogger $eventLogger,
+        private readonly DomainEventPublisher $domainEventPublisher,
     ) {
     }
 
@@ -41,6 +43,18 @@ class ContentSummaryGenerator
             'status' => SummaryStatus::GENERATING,
             'last_error' => null,
         ])->save();
+
+        $this->domainEventPublisher->publish(DomainEvents::SUMMARY_STATUS_CHANGED, [
+            'content_id' => $content->id,
+            'summary_id' => $summary->id,
+            'status' => SummaryStatus::GENERATING->value,
+            'provider' => is_string($runContext['provider'] ?? null)
+                ? trim((string) $runContext['provider'])
+                : (string) config('ai.provider', 'ollama'),
+            'model' => is_string($options['model'] ?? null) && trim((string) $options['model']) !== ''
+                ? trim((string) $options['model'])
+                : null,
+        ]);
 
         $startedAt = microtime(true);
         $queueVersion = is_numeric($runContext['queue_version'] ?? null) ? (int) $runContext['queue_version'] : null;
@@ -85,6 +99,24 @@ class ContentSummaryGenerator
                     'chunks' => $generated['chunks'],
                 ],
             );
+
+            $this->domainEventPublisher->publish(DomainEvents::SUMMARY_GENERATED, [
+                'content_id' => $content->id,
+                'summary_id' => $summary->id,
+                'status' => SummaryStatus::READY->value,
+                'model' => $summary->model,
+                'prompt_version' => $summary->prompt_version,
+                'tokens_in' => $summary->tokens_in,
+                'tokens_out' => $summary->tokens_out,
+                'generation_ms' => $summary->generation_ms,
+            ]);
+
+            $this->domainEventPublisher->publish(DomainEvents::SUMMARY_STATUS_CHANGED, [
+                'content_id' => $content->id,
+                'summary_id' => $summary->id,
+                'status' => SummaryStatus::READY->value,
+                'model' => $summary->model,
+            ]);
         } catch (Throwable $exception) {
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
@@ -105,6 +137,13 @@ class ContentSummaryGenerator
                 durationMs: $durationMs,
                 message: Str::limit($exception->getMessage(), 500),
             );
+
+            $this->domainEventPublisher->publish(DomainEvents::SUMMARY_STATUS_CHANGED, [
+                'content_id' => $content->id,
+                'summary_id' => $summary->id,
+                'status' => SummaryStatus::FAILED->value,
+                'error' => Str::limit($exception->getMessage(), 500),
+            ]);
 
             throw $exception;
         }

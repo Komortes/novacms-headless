@@ -7,6 +7,8 @@ use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryEventLogger;
 use App\Services\ContentSummaryGenerator;
 use App\Services\ContentSummaryQueueVersion;
+use App\Services\DomainEventPublisher;
+use App\DomainEvents;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,6 +41,7 @@ class GenerateContentSummaryJob implements ShouldQueue
         AiSettingsManager $aiSettingsManager,
         ContentSummaryQueueVersion $queueVersion,
         ContentSummaryEventLogger $eventLogger,
+        DomainEventPublisher $domainEventPublisher,
     ): void
     {
         $content = Content::query()
@@ -60,6 +63,16 @@ class GenerateContentSummaryJob implements ShouldQueue
                 queueVersion: $this->version,
                 message: 'Outdated queue version skipped.',
             );
+
+            $domainEventPublisher->publish(DomainEvents::SUMMARY_STATUS_CHANGED, [
+                'content_id' => $content->id,
+                'summary_id' => $content->summary?->id,
+                'status' => 'skipped',
+                'provider' => $this->provider,
+                'model' => $this->model,
+                'reason' => 'outdated_queue_version',
+                'queue_version' => $this->version,
+            ]);
 
             return;
         }

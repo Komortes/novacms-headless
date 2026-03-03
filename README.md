@@ -71,7 +71,7 @@ Realtime status in admin/API consumers
 - summary record is updated and status becomes `ready` (or `failed` with error details)
 
 ### 3. Realtime Status
-- on status changes, domain events are broadcast via Reverb
+- on status changes, domain events are broadcast via Reverb on public channel `novacms.domain-events`
 - admin UI can render live transitions:
   - `pending -> generating -> ready`
   - `pending -> generating -> failed`
@@ -82,6 +82,18 @@ Realtime status in admin/API consumers
   - `semanticSearch(query)`
   - `relatedContent(contentId)`
 - embeddings are generated asynchronously on content create/update and can be backfilled via CLI
+
+### 5. Domain Events (Broadcast + Streams)
+- domain events are emitted for:
+  - `content.updated`
+  - `summary.generated`
+  - `embedding.created`
+- status transitions are emitted as:
+  - `summary.status.changed`
+  - `embedding.status.changed`
+- events are published to:
+  - Reverb (realtime clients)
+  - Redis Streams (`novacms:domain-events`)
 
 ## Data Model
 
@@ -170,6 +182,12 @@ AI_EMBEDDINGS_DIMENSIONS=1024
 AI_EMBEDDINGS_CHUNK_CHARS=1200
 AI_EMBEDDINGS_MAX_CHUNKS=32
 AI_EMBEDDINGS_AUTO_DISPATCH=true
+
+DOMAIN_EVENTS_BROADCAST_ENABLED=true
+DOMAIN_EVENTS_BROADCAST_CHANNEL=novacms.domain-events
+DOMAIN_EVENTS_STREAM_ENABLED=true
+DOMAIN_EVENTS_STREAM_NAME=novacms:domain-events
+DOMAIN_EVENTS_STREAM_MAXLEN=10000
 ```
 
 ## Run Locally

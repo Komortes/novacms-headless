@@ -2,10 +2,12 @@
 
 namespace App\Observers;
 
+use App\DomainEvents;
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Services\ContentEmbeddingDispatcher;
+use App\Services\DomainEventPublisher;
 use App\Services\ContentPublishQualityGate;
 
 class ContentObserver
@@ -29,6 +31,7 @@ class ContentObserver
 
         $this->markSummaryAsPending($content);
         $this->dispatchEmbeddings($content);
+        $this->publishContentUpdated($content);
     }
 
     public function updating(Content $content): void
@@ -76,5 +79,15 @@ class ContentObserver
         }
 
         app(ContentEmbeddingDispatcher::class)->dispatch($content);
+    }
+
+    private function publishContentUpdated(Content $content): void
+    {
+        app(DomainEventPublisher::class)->publish(DomainEvents::CONTENT_UPDATED, [
+            'content_id' => $content->id,
+            'slug' => $content->slug,
+            'locale' => $content->locale,
+            'content_hash' => $content->content_hash,
+        ]);
     }
 }
