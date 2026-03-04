@@ -19,6 +19,27 @@ return [
         'auto_dispatch' => (bool) env('AI_EMBEDDINGS_AUTO_DISPATCH', true),
     ],
 
+    'http_retry' => [
+        'times' => (int) env('AI_HTTP_RETRY_TIMES', 2),
+        'sleep_ms' => (int) env('AI_HTTP_RETRY_SLEEP_MS', 250),
+    ],
+
+    'jobs' => [
+        'rate_limit_per_minute' => (int) env('AI_RATE_LIMIT_PER_MINUTE', 60),
+        'summary' => [
+            'queue' => env('AI_SUMMARY_QUEUE', 'ai'),
+            'tries' => (int) env('AI_SUMMARY_JOB_TRIES', 3),
+            'timeout' => (int) env('AI_SUMMARY_JOB_TIMEOUT', 300),
+            'backoff_seconds' => (int) env('AI_SUMMARY_JOB_BACKOFF_SECONDS', 15),
+        ],
+        'embeddings' => [
+            'queue' => env('AI_EMBEDDINGS_QUEUE', 'ai'),
+            'tries' => (int) env('AI_EMBEDDINGS_JOB_TRIES', 3),
+            'timeout' => (int) env('AI_EMBEDDINGS_JOB_TIMEOUT', 300),
+            'backoff_seconds' => (int) env('AI_EMBEDDINGS_JOB_BACKOFF_SECONDS', 15),
+        ],
+    ],
+
     'providers' => [
         'ollama' => [
             'base_url' => env('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),

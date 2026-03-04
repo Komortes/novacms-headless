@@ -52,6 +52,7 @@ class ContentSummaryDispatcherTest extends TestCase
             return $job->contentId === $content->id
                 && $job->provider === 'ollama'
                 && $job->model === 'qwen2.5:1.5b'
+                && $job->queue === config('ai.jobs.summary.queue', 'ai')
                 && $job->version > 0;
         });
     }

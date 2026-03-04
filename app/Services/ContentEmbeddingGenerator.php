@@ -6,6 +6,7 @@ use App\AI\AiProviderFactory;
 use App\Models\Content;
 use App\Models\ContentEmbedding;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class ContentEmbeddingGenerator
 {
@@ -46,7 +47,7 @@ class ContentEmbeddingGenerator
                     'content_hash' => $content->content_hash,
                     'provider' => $resolvedProvider,
                     'dimensions' => $dimensions,
-                    'embedding' => $vector,
+                    'embedding' => $this->prepareEmbeddingValue($vector),
                     'meta' => [
                         'chunk_chars' => Str::length($chunk),
                     ],
@@ -166,5 +167,22 @@ class ContentEmbeddingGenerator
         $providerModel = trim((string) config("ai.providers.{$provider}.model", ''));
 
         return $providerModel !== '' ? $providerModel : 'nomic-embed-text';
+    }
+
+    /**
+     * @param  list<float>  $vector
+     */
+    private function prepareEmbeddingValue(array $vector): array|string
+    {
+        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+            return $vector;
+        }
+
+        $parts = array_map(
+            fn (float $value): string => rtrim(rtrim(number_format($value, 8, '.', ''), '0'), '.'),
+            $vector,
+        );
+
+        return '['.implode(',', $parts).']';
     }
 }

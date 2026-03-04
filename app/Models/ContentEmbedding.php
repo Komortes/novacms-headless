@@ -30,12 +30,17 @@ class ContentEmbedding extends Model
      */
     protected function casts(): array
     {
-        return [
+        $casts = [
             'chunk_index' => 'integer',
             'dimensions' => 'integer',
-            'embedding' => 'array',
             'meta' => 'array',
         ];
+
+        if ($this->getConnection()->getDriverName() !== 'pgsql') {
+            $casts['embedding'] = 'array';
+        }
+
+        return $casts;
     }
 
     public function content(): BelongsTo
