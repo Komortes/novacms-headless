@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Prompts\Tables;
 
+use App\Filament\Resources\Prompts\PromptResource;
 use App\Models\Prompt;
+use App\Services\PromptCatalogManager;
 use App\Services\PromptRegistry;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -52,6 +54,39 @@ class PromptsTable
                     ->label('Active only'),
             ])
             ->recordActions([
+                Action::make('compare')
+                    ->label('Compare')
+                    ->icon(Heroicon::ArrowsRightLeft)
+                    ->color('gray')
+                    ->url(fn (Prompt $record): string => PromptResource::getUrl('compare', [
+                        'prompt' => $record->name,
+                        'left' => $record->version,
+                    ])),
+                Action::make('export')
+                    ->label('Export')
+                    ->icon(Heroicon::ArrowDownTray)
+                    ->color('gray')
+                    ->action(function (Prompt $record) {
+                        $payload = app(PromptCatalogManager::class)->export(
+                            name: $record->name,
+                            version: $record->version,
+                        );
+
+                        return response()->streamDownload(
+                            function () use ($payload): void {
+                                echo json_encode(
+                                    $payload,
+                                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                                );
+                            },
+                            sprintf(
+                                'prompt-%s-%s.json',
+                                Str::slug($record->name),
+                                Str::slug($record->version),
+                            ),
+                            ['Content-Type' => 'application/json'],
+                        );
+                    }),
                 Action::make('activate')
                     ->label('Activate')
                     ->icon(Heroicon::Bolt)
