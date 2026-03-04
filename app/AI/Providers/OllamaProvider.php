@@ -47,6 +47,10 @@ class OllamaProvider implements AiProviderInterface
             $response = $this->http
                 ->baseUrl(rtrim($this->baseUrl, '/'))
                 ->timeout($this->timeout)
+                ->retry(
+                    (int) config('ai.http_retry.times', 2),
+                    (int) config('ai.http_retry.sleep_ms', 250),
+                )
                 ->acceptJson()
                 ->post('/api/generate', $requestBody)
                 ->throw();
@@ -104,6 +108,10 @@ class OllamaProvider implements AiProviderInterface
             $response = $this->http
                 ->baseUrl(rtrim($this->baseUrl, '/'))
                 ->timeout($this->timeout)
+                ->retry(
+                    (int) config('ai.http_retry.times', 2),
+                    (int) config('ai.http_retry.sleep_ms', 250),
+                )
                 ->acceptJson()
                 ->post('/api/embed', $requestBody)
                 ->throw();

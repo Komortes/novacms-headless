@@ -38,7 +38,8 @@ class ContentEmbeddingDispatcherTest extends TestCase
             return $job->contentId === $content->id
                 && $job->contentHash === $content->content_hash
                 && $job->provider === 'ollama'
-                && $job->model === 'nomic-embed-text';
+                && $job->model === 'nomic-embed-text'
+                && $job->queue === config('ai.jobs.embeddings.queue', 'ai');
         });
     }
 }

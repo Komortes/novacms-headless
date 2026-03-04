@@ -138,6 +138,7 @@ Realtime status in admin/API consumers
   - model name
   - token usage (`tokens_in`, `tokens_out`)
 - this provides reproducibility and traceability for AI output changes
+- prompt versions can be managed from Filament (`/admin/prompts`) and activated without code changes
 
 ## Local Infrastructure
 
@@ -170,6 +171,18 @@ AI_EMBEDDINGS_DIMENSIONS=1024
 AI_EMBEDDINGS_CHUNK_CHARS=1200
 AI_EMBEDDINGS_MAX_CHUNKS=32
 AI_EMBEDDINGS_AUTO_DISPATCH=true
+
+AI_HTTP_RETRY_TIMES=2
+AI_HTTP_RETRY_SLEEP_MS=250
+AI_RATE_LIMIT_PER_MINUTE=60
+AI_SUMMARY_QUEUE=ai
+AI_SUMMARY_JOB_TRIES=3
+AI_SUMMARY_JOB_TIMEOUT=300
+AI_SUMMARY_JOB_BACKOFF_SECONDS=15
+AI_EMBEDDINGS_QUEUE=ai
+AI_EMBEDDINGS_JOB_TRIES=3
+AI_EMBEDDINGS_JOB_TIMEOUT=300
+AI_EMBEDDINGS_JOB_BACKOFF_SECONDS=15
 ```
 
 ## Run Locally
@@ -203,6 +216,14 @@ php artisan content:reindex-embeddings
 
 # sync single content by slug
 php artisan content:reindex-embeddings sample-post --sync
+```
+
+Failed jobs (DLQ-style operational flow):
+
+```bash
+php artisan queue:failed
+php artisan queue:retry all
+php artisan queue:flush
 ```
 
 ## API Endpoints

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryEventLogger;
@@ -12,8 +13,12 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Throwable;
 
 class GenerateContentSummaryJob implements ShouldQueue
 {
@@ -22,9 +27,9 @@ class GenerateContentSummaryJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public int $tries = 1;
+    public int $tries;
 
-    public int $timeout = 300;
+    public int $timeout;
 
     public function __construct(
         public readonly int $contentId,
@@ -32,6 +37,26 @@ class GenerateContentSummaryJob implements ShouldQueue
         public readonly ?string $model = null,
         public readonly int $version = 0,
     ) {
+        $this->tries = max(1, (int) config('ai.jobs.summary.tries', 3));
+        $this->timeout = max(30, (int) config('ai.jobs.summary.timeout', 300));
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping('summary-content-'.$this->contentId))
+                ->releaseAfter(5)
+                ->expireAfter($this->timeout + 30),
+            new RateLimited('ai-requests'),
+        ];
+    }
+
+    public function backoff(): int
+    {
+        return max(1, (int) config('ai.jobs.summary.backoff_seconds', 15));
     }
 
     public function handle(
@@ -118,5 +143,36 @@ class GenerateContentSummaryJob implements ShouldQueue
         }
 
         return $match->created_at;
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $content = Content::query()->with('summary')->find($this->contentId);
+
+        if (! $content) {
+            return;
+        }
+
+        $summary = $content->summary ?: $content->summary()->firstOrCreate(
+            ['content_id' => $content->id],
+            ['status' => SummaryStatus::PENDING],
+        );
+
+        if ($summary->status !== SummaryStatus::READY) {
+            $summary->forceFill([
+                'status' => SummaryStatus::FAILED,
+                'last_error' => Str::limit($exception->getMessage(), 2000),
+            ])->save();
+        }
+
+        app(ContentSummaryEventLogger::class)->record(
+            content: $content,
+            event: 'failed',
+            summary: $summary,
+            provider: $this->provider,
+            model: $this->model,
+            queueVersion: $this->version,
+            message: 'Summary job exhausted retries: '.Str::limit($exception->getMessage(), 400),
+        );
     }
 }

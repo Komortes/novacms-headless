@@ -42,7 +42,7 @@ class ContentSummaryDispatcher
             provider: $provider,
             model: $model,
             version: $version,
-        );
+        )->onQueue((string) config('ai.jobs.summary.queue', 'ai'));
     }
 
     public function cancelPending(Content $content): void

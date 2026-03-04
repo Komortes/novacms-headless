@@ -47,6 +47,10 @@ class OpenAiProvider implements AiProviderInterface
             $response = $this->http
                 ->baseUrl(rtrim($this->baseUrl, '/'))
                 ->timeout($this->timeout)
+                ->retry(
+                    (int) config('ai.http_retry.times', 2),
+                    (int) config('ai.http_retry.sleep_ms', 250),
+                )
                 ->acceptJson()
                 ->withToken($this->apiKey)
                 ->post('/responses', $body)
@@ -102,6 +106,10 @@ class OpenAiProvider implements AiProviderInterface
             $response = $this->http
                 ->baseUrl(rtrim($this->baseUrl, '/'))
                 ->timeout($this->timeout)
+                ->retry(
+                    (int) config('ai.http_retry.times', 2),
+                    (int) config('ai.http_retry.sleep_ms', 250),
+                )
                 ->acceptJson()
                 ->withToken($this->apiKey)
                 ->post('/embeddings', $body)
