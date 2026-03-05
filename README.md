@@ -218,6 +218,14 @@ php artisan content:reindex-embeddings
 php artisan content:reindex-embeddings sample-post --sync
 ```
 
+Prompt registry workflow:
+
+- use `/admin/prompts` to create and edit prompt versions
+- use `Activate` action to switch the active version per prompt name
+- use `/admin/prompts/compare` to review template and parameter differences
+- use `Export all`, `Export active`, and row-level `Export` for JSON bundles
+- use `Import JSON` to upsert exported bundles back into the registry
+
 Failed jobs (DLQ-style operational flow):
 
 ```bash
@@ -231,6 +239,8 @@ php artisan queue:flush
 - GraphQL: `/graphql`
 - Admin panel: `/admin`
 - AI settings page: `/admin/settings/ai`
+- Prompt registry: `/admin/prompts`
+- Prompt compare: `/admin/prompts/compare`
 
 ### Semantic GraphQL Queries
 

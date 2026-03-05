@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Prompts;
 use App\Filament\Resources\Prompts\Pages\CreatePrompt;
 use App\Filament\Resources\Prompts\Pages\EditPrompt;
 use App\Filament\Resources\Prompts\Pages\ListPrompts;
+use App\Filament\Resources\Prompts\Pages\ComparePrompts;
 use App\Filament\Resources\Prompts\Schemas\PromptForm;
 use App\Filament\Resources\Prompts\Tables\PromptsTable;
 use App\Models\Prompt;
@@ -42,6 +43,7 @@ class PromptResource extends Resource
     {
         return [
             'index' => ListPrompts::route('/'),
+            'compare' => ComparePrompts::route('/compare'),
             'create' => CreatePrompt::route('/create'),
             'edit' => EditPrompt::route('/{record}/edit'),
         ];
