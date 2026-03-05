@@ -15,6 +15,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 
 class QueueCenter extends Page
 {
@@ -81,6 +82,12 @@ class QueueCenter extends Page
             ->body('Pending run for content #'.$content->id.' has been cancelled.')
             ->success()
             ->send();
+    }
+
+    #[On('novacms-domain-event')]
+    public function refreshFromDomainEvent(): void
+    {
+        // Livewire will re-render this page after the listener invocation.
     }
 
     /**

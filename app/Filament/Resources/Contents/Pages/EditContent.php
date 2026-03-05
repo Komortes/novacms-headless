@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Icons\Heroicon;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Throwable;
 
 class EditContent extends EditRecord
@@ -127,5 +128,11 @@ class EditContent extends EditRecord
                 ->disabled(fn (): bool => $this->getRecord()->summary?->status === SummaryStatus::GENERATING),
             DeleteAction::make(),
         ];
+    }
+
+    #[On('novacms-domain-event')]
+    public function refreshFromDomainEvent(): void
+    {
+        $this->record = $this->getRecord()->refresh();
     }
 }

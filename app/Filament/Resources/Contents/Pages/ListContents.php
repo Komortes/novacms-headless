@@ -13,6 +13,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\On;
 
 class ListContents extends ListRecords
 {
@@ -86,5 +87,11 @@ class ListContents extends ListRecords
                 ->color('gray'),
             CreateAction::make(),
         ];
+    }
+
+    #[On('novacms-domain-event')]
+    public function refreshFromDomainEvent(): void
+    {
+        // Trigger a re-render when background domain events are received.
     }
 }
