@@ -29,6 +29,8 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="AI_EMBEDDINGS_AUTO_DISPATCH" value="false"/>
         <env name="AI_RATE_LIMIT_PER_MINUTE" value="10000"/>
+        <env name="DOMAIN_EVENTS_STREAM_ENABLED" value="false"/>
+        <env name="DOMAIN_EVENTS_BROADCAST_ENABLED" value="false"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

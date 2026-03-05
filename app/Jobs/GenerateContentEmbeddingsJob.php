@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\DomainEvents;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentEmbeddingGenerator;
+use App\Services\DomainEventPublisher;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -57,6 +59,7 @@ class GenerateContentEmbeddingsJob implements ShouldQueue
     public function handle(
         ContentEmbeddingGenerator $generator,
         AiSettingsManager $aiSettingsManager,
+        DomainEventPublisher $domainEventPublisher,
     ): void
     {
         $content = Content::query()->find($this->contentId);
@@ -72,11 +75,21 @@ class GenerateContentEmbeddingsJob implements ShouldQueue
 
         $aiSettingsManager->applyConfigOverrides();
 
-        $generator->generateForContent(
+        $result = $generator->generateForContent(
             content: $content,
             provider: $this->provider,
             model: $this->model,
         );
+
+        $domainEventPublisher->publish(DomainEvents::EMBEDDING_CREATED, [
+            'content_id' => $content->id,
+            'content_hash' => $content->content_hash,
+            'provider' => $result['provider'],
+            'model' => $result['model'],
+            'chunks' => $result['chunks'],
+            'dimensions' => $result['dimensions'],
+            'deleted' => $result['deleted'],
+        ]);
     }
 
     public function failed(Throwable $exception): void
