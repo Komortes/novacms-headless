@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AI\Contracts\AiProviderInterface;
 use App\AI\Exceptions\AiProviderException;
+use App\DomainEvents;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
@@ -18,6 +19,7 @@ class ContentSummaryGenerator
         private readonly AiProviderInterface $aiProvider,
         private readonly PromptRegistry $promptRegistry,
         private readonly ContentSummaryEventLogger $eventLogger,
+        private readonly DomainEventPublisher $domainEventPublisher,
     ) {
     }
 
@@ -85,6 +87,17 @@ class ContentSummaryGenerator
                     'chunks' => $generated['chunks'],
                 ],
             );
+
+            $this->domainEventPublisher->publish(DomainEvents::SUMMARY_GENERATED, [
+                'content_id' => $content->id,
+                'summary_id' => $summary->id,
+                'status' => SummaryStatus::READY->value,
+                'model' => $summary->model,
+                'prompt_version' => $summary->prompt_version,
+                'tokens_in' => $summary->tokens_in,
+                'tokens_out' => $summary->tokens_out,
+                'generation_ms' => $summary->generation_ms,
+            ]);
         } catch (Throwable $exception) {
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
