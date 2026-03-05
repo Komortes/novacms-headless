@@ -20,6 +20,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
 use Throwable;
 
 class ViewContent extends ViewRecord
@@ -175,5 +176,11 @@ class ViewContent extends ViewRecord
     public function getMaxContentWidth(): Width|string|null
     {
         return Width::Full;
+    }
+
+    #[On('novacms-domain-event')]
+    public function refreshFromDomainEvent(): void
+    {
+        $this->record = $this->getRecord()->refresh();
     }
 }
