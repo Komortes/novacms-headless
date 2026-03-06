@@ -27,6 +27,7 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="AI_SUMMARY_AUTO_DISPATCH" value="false"/>
         <env name="AI_EMBEDDINGS_AUTO_DISPATCH" value="false"/>
         <env name="AI_RATE_LIMIT_PER_MINUTE" value="10000"/>
         <env name="DOMAIN_EVENTS_STREAM_ENABLED" value="false"/>

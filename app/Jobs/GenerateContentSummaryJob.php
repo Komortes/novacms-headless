@@ -36,6 +36,7 @@ class GenerateContentSummaryJob implements ShouldQueue
         public readonly ?string $provider = null,
         public readonly ?string $model = null,
         public readonly int $version = 0,
+        public readonly ?string $promptVersion = null,
     ) {
         $this->tries = max(1, (int) config('ai.jobs.summary.tries', 3));
         $this->timeout = max(30, (int) config('ai.jobs.summary.timeout', 300));
@@ -60,7 +61,6 @@ class GenerateContentSummaryJob implements ShouldQueue
     }
 
     public function handle(
-        ContentSummaryGenerator $generator,
         AiSettingsManager $aiSettingsManager,
         ContentSummaryQueueVersion $queueVersion,
         ContentSummaryEventLogger $eventLogger,
@@ -115,10 +115,17 @@ class GenerateContentSummaryJob implements ShouldQueue
             model: $resolvedModel,
             queueVersion: $this->version,
             waitMs: $waitMs,
+            meta: $this->promptVersion !== null && trim($this->promptVersion) !== ''
+                ? ['prompt_version' => trim($this->promptVersion)]
+                : [],
         );
+
+        /** @var ContentSummaryGenerator $generator */
+        $generator = app(ContentSummaryGenerator::class);
 
         $generator->generateForContent(
             $content,
+            $this->promptVersion,
             options: $options,
             runContext: [
                 'provider' => $resolvedProvider,

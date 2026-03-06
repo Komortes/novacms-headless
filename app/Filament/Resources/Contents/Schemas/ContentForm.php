@@ -10,7 +10,9 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Unique;
 
 class ContentForm
 {
@@ -45,7 +47,11 @@ class ContentForm
                             ->columnSpanFull(),
                         TextInput::make('slug')
                             ->required()
-                            ->unique(ignoreRecord: true)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule, Get $get): Unique => $rule
+                                    ->where('locale', (string) ($get('locale') ?: 'en')),
+                            )
                             ->helperText('Unique per locale.')
                             ->maxLength(255),
                         TextInput::make('locale')

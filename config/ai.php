@@ -10,6 +10,10 @@ return [
         'max_chunks' => (int) env('AI_MAP_REDUCE_MAX_CHUNKS', 12),
     ],
 
+    'summary' => [
+        'auto_dispatch' => (bool) env('AI_SUMMARY_AUTO_DISPATCH', true),
+    ],
+
     'embeddings' => [
         'provider' => env('AI_EMBEDDINGS_PROVIDER', env('AI_PROVIDER', 'ollama')),
         'model' => env('AI_EMBEDDINGS_MODEL', 'nomic-embed-text'),

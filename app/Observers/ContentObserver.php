@@ -8,6 +8,7 @@ use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentPublishQualityGate;
+use App\Services\ContentSummaryDispatcher;
 use App\Services\DomainEventPublisher;
 
 class ContentObserver
@@ -20,6 +21,7 @@ class ContentObserver
     public function created(Content $content): void
     {
         $this->markSummaryAsPending($content);
+        $this->dispatchSummary($content);
         $this->dispatchEmbeddings($content);
     }
 
@@ -30,6 +32,7 @@ class ContentObserver
         }
 
         $this->markSummaryAsPending($content);
+        $this->dispatchSummary($content);
         $this->dispatchEmbeddings($content);
         $this->publishContentUpdated($content);
     }
@@ -79,6 +82,15 @@ class ContentObserver
         }
 
         app(ContentEmbeddingDispatcher::class)->dispatch($content);
+    }
+
+    private function dispatchSummary(Content $content): void
+    {
+        if (! (bool) config('ai.summary.auto_dispatch', true)) {
+            return;
+        }
+
+        app(ContentSummaryDispatcher::class)->dispatch($content);
     }
 
     private function publishContentUpdated(Content $content): void

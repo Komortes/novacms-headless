@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
+use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ContentLifecycleTest extends TestCase
@@ -32,6 +34,25 @@ class ContentLifecycleTest extends TestCase
         $this->assertSame(64, strlen($content->content_hash));
         $this->assertNotNull($summary);
         $this->assertSame(SummaryStatus::PENDING, $summary?->status);
+    }
+
+    public function test_content_create_can_auto_dispatch_summary_job(): void
+    {
+        config()->set('ai.summary.auto_dispatch', true);
+        Queue::fake();
+
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'queued-on-create',
+            'title' => 'Queued On Create',
+            'body' => 'Initial body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        Queue::assertPushed(GenerateContentSummaryJob::class, function (GenerateContentSummaryJob $job) use ($content): bool {
+            return $job->contentId === $content->id && $job->version > 0;
+        });
     }
 
     public function test_content_hash_change_resets_summary_to_pending(): void
@@ -70,6 +91,32 @@ class ContentLifecycleTest extends TestCase
         $this->assertNull($summary?->prompt_version);
         $this->assertNull($summary?->tokens_in);
         $this->assertNull($summary?->tokens_out);
+    }
+
+    public function test_content_update_with_hash_change_can_auto_dispatch_summary_job(): void
+    {
+        config()->set('ai.summary.auto_dispatch', true);
+        Queue::fake();
+
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'queued-on-update',
+            'title' => 'Queued On Update',
+            'body' => 'Version one',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        Queue::assertPushed(GenerateContentSummaryJob::class);
+        Queue::fake();
+
+        $content->update([
+            'body' => 'Version two',
+        ]);
+
+        Queue::assertPushed(GenerateContentSummaryJob::class, function (GenerateContentSummaryJob $job) use ($content): bool {
+            return $job->contentId === $content->id && $job->version > 1;
+        });
     }
 
     public function test_non_hash_field_update_does_not_reset_summary(): void

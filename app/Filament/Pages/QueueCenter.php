@@ -98,8 +98,10 @@ class QueueCenter extends Page
         $avgGenerationMs = (int) round((float) ContentAiSummary::query()
             ->whereNotNull('generation_ms')
             ->where('status', SummaryStatus::READY->value)
+            ->latest('id')
             ->limit(200)
-            ->avg('generation_ms'));
+            ->pluck('generation_ms')
+            ->avg());
 
         $pendingItems = Content::query()
             ->with('summary')

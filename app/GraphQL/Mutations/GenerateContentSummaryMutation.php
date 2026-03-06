@@ -2,14 +2,15 @@
 
 namespace App\GraphQL\Mutations;
 
+use App\Enums\SummaryStatus;
 use App\Models\Content;
-use App\Services\ContentSummaryGenerator;
+use App\Services\ContentSummaryDispatcher;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class GenerateContentSummaryMutation
 {
     public function __construct(
-        private readonly ContentSummaryGenerator $generator,
+        private readonly ContentSummaryDispatcher $dispatcher,
     ) {
     }
 
@@ -24,10 +25,14 @@ class GenerateContentSummaryMutation
             throw (new ModelNotFoundException())->setModel(Content::class, [$args['content_id']]);
         }
 
-        return $this->generator->generateForContent(
-            $content,
-            $args['prompt_version'] ?? null,
+        $this->dispatcher->dispatch(
+            content: $content,
+            promptVersion: $args['prompt_version'] ?? null,
+        );
+
+        return $content->summary()->firstOrCreate(
+            ['content_id' => $content->id],
+            ['status' => SummaryStatus::PENDING],
         );
     }
 }
-

@@ -14,7 +14,12 @@ class ContentSummaryDispatcher
     ) {
     }
 
-    public function dispatch(Content $content, ?string $provider = null, ?string $model = null): void
+    public function dispatch(
+        Content $content,
+        ?string $provider = null,
+        ?string $model = null,
+        ?string $promptVersion = null,
+    ): void
     {
         $summary = $content->summary()->firstOrCreate(
             ['content_id' => $content->id],
@@ -35,6 +40,9 @@ class ContentSummaryDispatcher
             provider: $provider,
             model: $model,
             queueVersion: $version,
+            meta: $promptVersion !== null && trim($promptVersion) !== ''
+                ? ['prompt_version' => $promptVersion]
+                : [],
         );
 
         GenerateContentSummaryJob::dispatch(
@@ -42,7 +50,10 @@ class ContentSummaryDispatcher
             provider: $provider,
             model: $model,
             version: $version,
-        )->onQueue((string) config('ai.jobs.summary.queue', 'ai'));
+            promptVersion: $promptVersion,
+        )
+            ->onQueue((string) config('ai.jobs.summary.queue', 'ai'))
+            ->afterCommit();
     }
 
     public function cancelPending(Content $content): void

@@ -14,6 +14,8 @@ class ContentEmbeddingDispatcher
             contentHash: $content->content_hash,
             provider: $provider,
             model: $model,
-        )->onQueue((string) config('ai.jobs.embeddings.queue', 'ai'));
+        )
+            ->onQueue((string) config('ai.jobs.embeddings.queue', 'ai'))
+            ->afterCommit();
     }
 }
