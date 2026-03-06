@@ -5,6 +5,7 @@ use App\Enums\ContentType;
 use App\Models\Content;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentEmbeddingGenerator;
+use App\Services\ContentEmbeddingReindexer;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\ContentSummaryGenerator;
 use App\Services\RuntimeHealthService;
@@ -146,95 +147,137 @@ Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Pos
     return Command::SUCCESS;
 })->purpose('Create a sample content record for local AI summary testing');
 
-Artisan::command('content:reindex-embeddings {content? : Optional Content ID or slug} {--provider=} {--model=} {--sync}', function () {
+Artisan::command('content:reindex-embeddings {content? : Optional Content ID or slug} {--provider=} {--model=} {--mode=incremental : incremental|full} {--sync}', function () {
     $contentArgument = $this->argument('content');
     $provider = $this->option('provider');
     $model = $this->option('model');
+    $mode = strtolower(trim((string) $this->option('mode')));
     $sync = (bool) $this->option('sync');
 
-    $query = Content::query()->orderBy('id');
+    /** @var ContentEmbeddingReindexer $reindexer */
+    $reindexer = app(ContentEmbeddingReindexer::class);
 
     if (is_string($contentArgument) && trim($contentArgument) !== '') {
         $argument = trim($contentArgument);
-        $query->where(
+
+        /** @var Content|null $content */
+        $content = Content::query()->where(
             ctype_digit($argument) ? 'id' : 'slug',
             ctype_digit($argument) ? (int) $argument : $argument,
-        );
-    }
+        )->first();
 
-    $contents = $query->get();
+        if (! $content) {
+            $this->error("No content found for [{$argument}].");
 
-    if ($contents->isEmpty()) {
-        $target = is_string($contentArgument) && trim($contentArgument) !== '' ? $contentArgument : 'all';
-        $this->error("No content found for [{$target}].");
+            return Command::FAILURE;
+        }
 
-        return Command::FAILURE;
-    }
-
-    if (! $sync) {
-        /** @var ContentEmbeddingDispatcher $dispatcher */
-        $dispatcher = app(ContentEmbeddingDispatcher::class);
-
-        foreach ($contents as $content) {
-            $dispatcher->dispatch(
+        if (! $sync) {
+            app(ContentEmbeddingDispatcher::class)->dispatch(
                 content: $content,
                 provider: is_string($provider) && $provider !== '' ? $provider : null,
                 model: is_string($model) && $model !== '' ? $model : null,
             );
+
+            $this->info('Embedding reindex queued.');
+            $this->line('Queued items: 1');
+            $this->line('Scope: single content');
+            $this->line('Content ID: '.$content->id);
+
+            return Command::SUCCESS;
         }
 
-        $this->info('Embedding reindex queued.');
-        $this->line('Queued items: '.$contents->count());
+        /** @var ContentEmbeddingGenerator $generator */
+        $generator = app(ContentEmbeddingGenerator::class);
 
-        return Command::SUCCESS;
-    }
-
-    /** @var ContentEmbeddingGenerator $generator */
-    $generator = app(ContentEmbeddingGenerator::class);
-    $processed = 0;
-    $failed = 0;
-
-    foreach ($contents as $content) {
         try {
             $result = $generator->generateForContent(
                 content: $content,
                 provider: is_string($provider) && $provider !== '' ? $provider : null,
                 model: is_string($model) && $model !== '' ? $model : null,
             );
-            $processed++;
-
-            $this->line(
-                sprintf(
-                    '#%d %s -> chunks=%d, deleted=%d, provider=%s, model=%s',
-                    $content->id,
-                    $content->slug,
-                    $result['chunks'],
-                    $result['deleted'],
-                    $result['provider'],
-                    $result['model'],
-                ),
-            );
         } catch (Throwable $exception) {
-            $failed++;
             $this->error(sprintf(
                 '#%d %s -> failed: %s',
                 $content->id,
                 $content->slug,
                 $exception->getMessage(),
             ));
+
+            return Command::FAILURE;
         }
+
+        $this->info('Embedding reindex completed.');
+        $this->line(
+            sprintf(
+                '#%d %s -> chunks=%d, deleted=%d, provider=%s, model=%s',
+                $content->id,
+                $content->slug,
+                $result['chunks'],
+                $result['deleted'],
+                $result['provider'],
+                $result['model'],
+            ),
+        );
+
+        return Command::SUCCESS;
     }
 
-    if ($failed > 0) {
-        $this->error("Embedding reindex finished with failures. processed={$processed}, failed={$failed}");
+    if (! $reindexer->isSupportedMode($mode)) {
+        $this->error('Invalid --mode. Allowed: incremental, full');
 
         return Command::FAILURE;
     }
 
-    $this->info("Embedding reindex completed. processed={$processed}");
+    $targetCount = $reindexer->count($mode);
+
+    if ($targetCount === 0) {
+        $this->info('No content requires embedding reindex.');
+        $this->line('Mode: '.$mode);
+
+        return Command::SUCCESS;
+    }
+
+    if (! $sync) {
+        $queued = $reindexer->dispatch(
+            mode: $mode,
+            provider: is_string($provider) && $provider !== '' ? $provider : null,
+            model: is_string($model) && $model !== '' ? $model : null,
+        );
+
+        $this->info('Embedding reindex queued.');
+        $this->line('Mode: '.$mode);
+        $this->line('Queued items: '.$queued);
+
+        return Command::SUCCESS;
+    }
+
+    $report = $reindexer->runSync(
+        mode: $mode,
+        provider: is_string($provider) && $provider !== '' ? $provider : null,
+        model: is_string($model) && $model !== '' ? $model : null,
+    );
+
+    foreach ($report['failures'] as $failure) {
+        $this->error(sprintf(
+            '#%d %s -> failed: %s',
+            $failure['content_id'],
+            $failure['slug'],
+            $failure['error'],
+        ));
+    }
+
+    if ($report['failed'] > 0) {
+        $this->error("Embedding reindex finished with failures. processed={$report['processed']}, failed={$report['failed']}");
+
+        return Command::FAILURE;
+    }
+
+    $this->info("Embedding reindex completed. processed={$report['processed']}");
+    $this->line('Mode: '.$mode);
 
     return Command::SUCCESS;
-})->purpose('Reindex embeddings for one content or all content records');
+})->purpose('Reindex embeddings for one content or for all content records in incremental/full mode');
 
 Artisan::command('stack:smoke {--json}', function (RuntimeHealthService $health): int {
     $report = $health->collect();

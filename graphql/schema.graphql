@@ -89,9 +89,23 @@ type Query {
     prompt(id: ID! @eq): Prompt @find(model: "App\\Models\\Prompt")
     prompts: [Prompt!]! @paginate(model: "App\\Models\\Prompt", defaultCount: 20)
     activePrompt(name: String!, version: String): Prompt @field(resolver: "App\\GraphQL\\Queries\\ActivePromptQuery")
-    semanticSearch(query: String!, limit: Int = 10, locale: String): [SemanticContentMatch!]!
+    semanticSearch(
+        query: String!,
+        limit: Int = 10,
+        locale: String,
+        status: ContentStatus,
+        type: ContentType,
+        min_score: Float
+    ): [SemanticContentMatch!]!
         @field(resolver: "App\\GraphQL\\Queries\\SemanticSearchQuery")
-    relatedContent(content_id: ID!, limit: Int = 5): [SemanticContentMatch!]!
+    relatedContent(
+        content_id: ID!,
+        limit: Int = 5,
+        locale: String,
+        status: ContentStatus,
+        type: ContentType,
+        min_score: Float
+    ): [SemanticContentMatch!]!
         @field(resolver: "App\\GraphQL\\Queries\\RelatedContentQuery")
 }
 

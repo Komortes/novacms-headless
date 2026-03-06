@@ -100,6 +100,102 @@ GRAPHQL,
         $response->assertJsonPath('data.semanticSearch.1.content.slug', 'second-match');
     }
 
+    public function test_semantic_search_can_filter_by_status_type_and_min_score(): void
+    {
+        $this->mockEmbeddingProvider([1.0, 0.0, 0.0]);
+
+        $publishedPost = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'published-post',
+            'title' => 'Published Post',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        $draftPost = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'draft-post',
+            'title' => 'Draft Post',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        $publishedPage = Content::create([
+            'type' => ContentType::PAGE,
+            'slug' => 'published-page',
+            'title' => 'Published Page',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        ContentEmbedding::insert([
+            [
+                'content_id' => $publishedPost->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $publishedPost->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([0.98, 0.02, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'content_id' => $draftPost->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $draftPost->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([1.0, 0.0, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'content_id' => $publishedPage->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $publishedPage->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([0.99, 0.01, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $response = $this->postJson('/graphql', [
+            'query' => <<<'GRAPHQL'
+query {
+  semanticSearch(
+    query: "search text",
+    limit: 5,
+    locale: "en",
+    status: PUBLISHED,
+    type: POST,
+    min_score: 0.95
+  ) {
+    score
+    content {
+      slug
+    }
+  }
+}
+GRAPHQL,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonMissingPath('errors');
+        $response->assertJsonCount(1, 'data.semanticSearch');
+        $response->assertJsonPath('data.semanticSearch.0.content.slug', 'published-post');
+    }
+
     public function test_related_content_excludes_source_record(): void
     {
         $base = Content::create([
@@ -181,6 +277,121 @@ GRAPHQL,
 
         $slugs = collect($response->json('data.relatedContent'))->pluck('content.slug')->all();
         $this->assertNotContains('base-content', $slugs);
+    }
+
+    public function test_related_content_can_apply_filters_and_threshold(): void
+    {
+        $base = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'base-filtered',
+            'title' => 'Base Filtered',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        $matching = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'matching-related',
+            'title' => 'Matching Related',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        $draft = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'draft-related',
+            'title' => 'Draft Related',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        $page = Content::create([
+            'type' => ContentType::PAGE,
+            'slug' => 'page-related',
+            'title' => 'Page Related',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        ContentEmbedding::insert([
+            [
+                'content_id' => $base->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $base->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([1.0, 0.0, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'content_id' => $matching->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $matching->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([0.93, 0.07, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'content_id' => $draft->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $draft->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([0.96, 0.04, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'content_id' => $page->id,
+                'source' => 'body',
+                'chunk_index' => 0,
+                'content_hash' => $page->content_hash,
+                'provider' => 'ollama',
+                'model' => 'nomic-embed-text',
+                'dimensions' => 3,
+                'embedding' => json_encode([0.97, 0.03, 0.0]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $response = $this->postJson('/graphql', [
+            'query' => <<<GRAPHQL
+query {
+  relatedContent(
+    content_id: {$base->id},
+    limit: 5,
+    locale: "en",
+    status: PUBLISHED,
+    type: POST,
+    min_score: 0.9
+  ) {
+    score
+    content {
+      slug
+    }
+  }
+}
+GRAPHQL,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonMissingPath('errors');
+        $response->assertJsonCount(1, 'data.relatedContent');
+        $response->assertJsonPath('data.relatedContent.0.content.slug', 'matching-related');
     }
 
     /**

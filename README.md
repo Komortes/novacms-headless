@@ -87,9 +87,12 @@ Realtime status in admin/API consumers
 ### 4. Semantic Search (v1.1)
 - content embeddings are stored in PostgreSQL (`pgvector`)
 - supported operations:
-  - `semanticSearch(query)`
-  - `relatedContent(contentId)`
-- embeddings are generated asynchronously on content create/update and can be backfilled via CLI
+  - `semanticSearch(query, locale, status, type, min_score)`
+  - `relatedContent(contentId, locale, status, type, min_score)`
+- embeddings are generated asynchronously on content create/update
+- reindex supports:
+  - incremental backfill for stale or missing embeddings
+  - full rebuild for provider/model migrations or search-quality resets
 
 ## Data Model
 
@@ -225,8 +228,11 @@ docker compose exec ollama ollama pull nomic-embed-text
 Reindex embeddings:
 
 ```bash
-# queue all content
+# queue only stale or missing embeddings
 php artisan content:reindex-embeddings
+
+# queue a full rebuild for all content
+php artisan content:reindex-embeddings --mode=full
 
 # sync single content by slug
 php artisan content:reindex-embeddings sample-post --sync
@@ -281,7 +287,14 @@ php artisan stack:smoke --json
 
 ```graphql
 query {
-  semanticSearch(query: "headless cms with ai", limit: 5, locale: "en") {
+  semanticSearch(
+    query: "headless cms with ai",
+    limit: 5,
+    locale: "en",
+    status: PUBLISHED,
+    type: POST,
+    min_score: 0.65
+  ) {
     score
     content {
       id
@@ -294,7 +307,14 @@ query {
 
 ```graphql
 query {
-  relatedContent(content_id: 1, limit: 5) {
+  relatedContent(
+    content_id: 1,
+    limit: 5,
+    locale: "en",
+    status: PUBLISHED,
+    type: POST,
+    min_score: 0.65
+  ) {
     score
     content {
       id
