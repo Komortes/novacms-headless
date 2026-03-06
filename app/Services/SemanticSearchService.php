@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\AI\AiProviderFactory;
+use App\Enums\ContentStatus;
+use App\Enums\ContentType;
 use App\Models\Content;
 use App\Models\ContentEmbedding;
 use Illuminate\Support\Collection;
@@ -19,7 +21,14 @@ class SemanticSearchService
     /**
      * @return list<array{content: Content, score: float}>
      */
-    public function semanticSearch(string $query, int $limit = 10, ?string $locale = null): array
+    public function semanticSearch(
+        string $query,
+        int $limit = 10,
+        ?string $locale = null,
+        ?ContentStatus $status = null,
+        ?ContentType $type = null,
+        ?float $minScore = null,
+    ): array
     {
         $normalizedQuery = trim($query);
 
@@ -33,13 +42,27 @@ class SemanticSearchService
             return [];
         }
 
-        return $this->searchByVector($vector, $limit, $locale);
+        return $this->searchByVector(
+            queryVector: $vector,
+            limit: $limit,
+            locale: $locale,
+            status: $status,
+            type: $type,
+            minScore: $minScore,
+        );
     }
 
     /**
      * @return list<array{content: Content, score: float}>
      */
-    public function relatedContent(int $contentId, int $limit = 5): array
+    public function relatedContent(
+        int $contentId,
+        int $limit = 5,
+        ?string $locale = null,
+        ?ContentStatus $status = null,
+        ?ContentType $type = null,
+        ?float $minScore = null,
+    ): array
     {
         $centroid = $this->resolveContentCentroidVector($contentId);
 
@@ -47,36 +70,78 @@ class SemanticSearchService
             return [];
         }
 
-        return $this->searchByVector($centroid, $limit, null, $contentId);
+        return $this->searchByVector(
+            queryVector: $centroid,
+            limit: $limit,
+            locale: $locale,
+            status: $status,
+            type: $type,
+            minScore: $minScore,
+            excludeContentId: $contentId,
+        );
     }
 
     /**
      * @param  list<float>  $queryVector
      * @return list<array{content: Content, score: float}>
      */
-    private function searchByVector(array $queryVector, int $limit, ?string $locale = null, ?int $excludeContentId = null): array
+    private function searchByVector(
+        array $queryVector,
+        int $limit,
+        ?string $locale = null,
+        ?ContentStatus $status = null,
+        ?ContentType $type = null,
+        ?float $minScore = null,
+        ?int $excludeContentId = null,
+    ): array
     {
         $safeLimit = max(1, min(100, $limit));
+        $scoreThreshold = $this->normalizeMinScore($minScore);
 
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            return $this->searchByVectorPgsql($queryVector, $safeLimit, $locale, $excludeContentId);
+            return $this->searchByVectorPgsql(
+                queryVector: $queryVector,
+                limit: $safeLimit,
+                locale: $locale,
+                status: $status,
+                type: $type,
+                minScore: $scoreThreshold,
+                excludeContentId: $excludeContentId,
+            );
         }
 
-        return $this->searchByVectorFallback($queryVector, $safeLimit, $locale, $excludeContentId);
+        return $this->searchByVectorFallback(
+            queryVector: $queryVector,
+            limit: $safeLimit,
+            locale: $locale,
+            status: $status,
+            type: $type,
+            minScore: $scoreThreshold,
+            excludeContentId: $excludeContentId,
+        );
     }
 
     /**
      * @param  list<float>  $queryVector
      * @return list<array{content: Content, score: float}>
      */
-    private function searchByVectorPgsql(array $queryVector, int $limit, ?string $locale, ?int $excludeContentId): array
+    private function searchByVectorPgsql(
+        array $queryVector,
+        int $limit,
+        ?string $locale,
+        ?ContentStatus $status,
+        ?ContentType $type,
+        ?float $minScore,
+        ?int $excludeContentId,
+    ): array
     {
         $vectorLiteral = $this->vectorToSqlLiteral($queryVector);
+        $scoreExpression = 'MAX(1 - (content_embeddings.embedding <=> ?::vector))';
 
-        $rows = DB::table('content_embeddings')
+        $query = DB::table('content_embeddings')
             ->join('contents', 'contents.id', '=', 'content_embeddings.content_id')
             ->selectRaw(
-                'content_embeddings.content_id, MAX(1 - (content_embeddings.embedding <=> ?::vector)) as score',
+                "content_embeddings.content_id, {$scoreExpression} as score",
                 [$vectorLiteral],
             )
             ->when(
@@ -87,7 +152,21 @@ class SemanticSearchService
                 is_numeric($excludeContentId),
                 fn ($query) => $query->where('content_embeddings.content_id', '!=', $excludeContentId),
             )
-            ->groupBy('content_embeddings.content_id')
+            ->when(
+                $status instanceof ContentStatus,
+                fn ($query) => $query->where('contents.status', $status->value),
+            )
+            ->when(
+                $type instanceof ContentType,
+                fn ($query) => $query->where('contents.type', $type->value),
+            )
+            ->groupBy('content_embeddings.content_id');
+
+        if ($minScore !== null) {
+            $query->havingRaw("{$scoreExpression} >= ?", [$vectorLiteral, $minScore]);
+        }
+
+        $rows = $query
             ->orderByDesc('score')
             ->limit($limit)
             ->get();
@@ -99,7 +178,15 @@ class SemanticSearchService
      * @param  list<float>  $queryVector
      * @return list<array{content: Content, score: float}>
      */
-    private function searchByVectorFallback(array $queryVector, int $limit, ?string $locale, ?int $excludeContentId): array
+    private function searchByVectorFallback(
+        array $queryVector,
+        int $limit,
+        ?string $locale,
+        ?ContentStatus $status,
+        ?ContentType $type,
+        ?float $minScore,
+        ?int $excludeContentId,
+    ): array
     {
         $rows = ContentEmbedding::query()
             ->with('content')
@@ -110,6 +197,14 @@ class SemanticSearchService
             ->when(
                 is_numeric($excludeContentId),
                 fn ($query) => $query->where('content_id', '!=', $excludeContentId),
+            )
+            ->when(
+                $status instanceof ContentStatus,
+                fn ($query) => $query->whereHas('content', fn ($contentQuery) => $contentQuery->where('status', $status->value)),
+            )
+            ->when(
+                $type instanceof ContentType,
+                fn ($query) => $query->whereHas('content', fn ($contentQuery) => $contentQuery->where('type', $type->value)),
             )
             ->get();
 
@@ -123,6 +218,10 @@ class SemanticSearchService
             }
 
             $score = $this->cosineSimilarity($queryVector, $candidateVector);
+
+            if ($minScore !== null && $score < $minScore) {
+                continue;
+            }
 
             if (! isset($bestByContent[$row->content_id]) || $score > $bestByContent[$row->content_id]['score']) {
                 $bestByContent[$row->content_id] = [
@@ -271,6 +370,15 @@ class SemanticSearchService
         }
 
         return $vector;
+    }
+
+    private function normalizeMinScore(?float $minScore): ?float
+    {
+        if ($minScore === null) {
+            return null;
+        }
+
+        return max(-1.0, min(1.0, $minScore));
     }
 
     /**
