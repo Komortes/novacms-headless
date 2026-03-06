@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DomainEvents;
 use App\Enums\SummaryStatus;
 use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
@@ -11,6 +12,7 @@ class ContentSummaryDispatcher
     public function __construct(
         private readonly ContentSummaryQueueVersion $queueVersion,
         private readonly ContentSummaryEventLogger $eventLogger,
+        private readonly DomainEventPublisher $domainEventPublisher,
     ) {
     }
 
@@ -75,5 +77,15 @@ class ContentSummaryDispatcher
             queueVersion: $this->queueVersion->current($content->id),
             message: 'Queued generation cancelled by user.',
         );
+
+        $latestSummary = $content->summary()->first();
+
+        $this->domainEventPublisher->publish(DomainEvents::SUMMARY_CANCELLED, [
+            'content_id' => $content->id,
+            'summary_id' => $latestSummary?->id,
+            'status' => SummaryStatus::FAILED->value,
+            'last_error' => 'Queued generation cancelled by user.',
+            'queue_version' => $this->queueVersion->current($content->id),
+        ]);
     }
 }

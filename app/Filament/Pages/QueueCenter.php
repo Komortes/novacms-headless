@@ -95,6 +95,29 @@ class QueueCenter extends Page
      */
     protected function getViewData(): array
     {
+        $pendingCount = ContentAiSummary::query()->where('status', SummaryStatus::PENDING->value)->count();
+        $generatingCount = ContentAiSummary::query()->where('status', SummaryStatus::GENERATING->value)->count();
+        $failedCount = ContentAiSummary::query()->where('status', SummaryStatus::FAILED->value)->count();
+        $queueDepth = $pendingCount + $generatingCount;
+        $oldestPendingSummary = ContentAiSummary::query()
+            ->where('status', SummaryStatus::PENDING->value)
+            ->oldest('updated_at')
+            ->first();
+        $oldestPendingAgeMs = $oldestPendingSummary?->updated_at?->diffInMilliseconds(now());
+        $windowHours = 24;
+        $windowStart = now()->subHours($windowHours);
+        $recentCompleted = ContentAiSummaryEvent::query()
+            ->where('event', 'completed')
+            ->where('created_at', '>=', $windowStart)
+            ->count();
+        $recentFailed = ContentAiSummaryEvent::query()
+            ->where('event', 'failed')
+            ->where('created_at', '>=', $windowStart)
+            ->count();
+        $recentTotal = $recentCompleted + $recentFailed;
+        $successRate = $recentTotal > 0 ? round(($recentCompleted / $recentTotal) * 100, 1) : null;
+        $failureRate = $recentTotal > 0 ? round(($recentFailed / $recentTotal) * 100, 1) : null;
+
         $avgGenerationMs = (int) round((float) ContentAiSummary::query()
             ->whereNotNull('generation_ms')
             ->where('status', SummaryStatus::READY->value)
@@ -125,9 +148,16 @@ class QueueCenter extends Page
             ->get();
 
         return [
-            'pendingCount' => ContentAiSummary::query()->where('status', SummaryStatus::PENDING->value)->count(),
-            'generatingCount' => ContentAiSummary::query()->where('status', SummaryStatus::GENERATING->value)->count(),
-            'failedCount' => ContentAiSummary::query()->where('status', SummaryStatus::FAILED->value)->count(),
+            'pendingCount' => $pendingCount,
+            'generatingCount' => $generatingCount,
+            'failedCount' => $failedCount,
+            'queueDepth' => $queueDepth,
+            'oldestPendingAge' => $this->formatDuration($oldestPendingAgeMs),
+            'windowHours' => $windowHours,
+            'recentCompletedCount' => $recentCompleted,
+            'recentFailedCount' => $recentFailed,
+            'recentSuccessRate' => $successRate,
+            'recentFailureRate' => $failureRate,
             'avgGeneration' => $this->formatDuration($avgGenerationMs > 0 ? $avgGenerationMs : null),
             'pendingItems' => $this->normalizeItems($pendingItems, 'pending', $avgGenerationMs),
             'generatingItems' => $this->normalizeItems($generatingItems, 'generating', $avgGenerationMs),

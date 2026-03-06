@@ -12,7 +12,7 @@
             </div>
         </section>
 
-        <section class="grid gap-4 md:grid-cols-3">
+        <section class="grid gap-4 md:grid-cols-4">
             <article class="rounded-xl border border-amber-200 bg-white p-4 shadow-sm dark:border-amber-800/50 dark:bg-gray-900">
                 <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Pending</p>
                 <p class="mt-1 text-3xl font-bold text-amber-900 dark:text-amber-100">{{ $pendingCount }}</p>
@@ -28,16 +28,40 @@
                 <p class="mt-1 text-3xl font-bold text-rose-900 dark:text-rose-100">{{ $failedCount }}</p>
                 <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">Needs manual retry or configuration fix.</p>
             </article>
+            <article class="rounded-xl border border-indigo-200 bg-white p-4 shadow-sm dark:border-indigo-800/50 dark:bg-gray-900">
+                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Queue Depth</p>
+                <p class="mt-1 text-3xl font-bold text-indigo-900 dark:text-indigo-100">{{ $queueDepth }}</p>
+                <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">Pending + generating jobs.</p>
+            </article>
         </section>
 
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Queue estimate</p>
-                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">Average generation time (recent successful runs):</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Operational Snapshot</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">Queue age and recent success/failure rates (last {{ $windowHours }}h).</p>
                 </div>
-                <div class="rounded-lg bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-900 dark:bg-gray-800 dark:text-gray-100">
-                    {{ $avgGeneration }}
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Avg generation</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $avgGeneration }}</p>
+                </div>
+                <div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Oldest pending age</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $oldestPendingAge }}</p>
+                </div>
+                <div class="rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-900/20">
+                    <p class="text-xs text-emerald-700 dark:text-emerald-200">Success rate</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentSuccessRate !== null ? $recentSuccessRate.'%' : 'n/a' }}</p>
+                </div>
+                <div class="rounded-lg bg-rose-50 px-3 py-2 dark:bg-rose-900/20">
+                    <p class="text-xs text-rose-700 dark:text-rose-200">Failure rate</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentFailureRate !== null ? $recentFailureRate.'%' : 'n/a' }}</p>
+                </div>
+                <div class="rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Completed runs</p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentCompletedCount }}</p>
                 </div>
             </div>
         </section>

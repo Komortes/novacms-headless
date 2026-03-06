@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\DomainEvents;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
@@ -9,8 +10,10 @@ use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
 use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryDispatcher;
+use App\Services\DomainEventPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Tests\TestCase;
 
 class ContentSummaryDispatcherTest extends TestCase
@@ -60,6 +63,16 @@ class ContentSummaryDispatcherTest extends TestCase
     public function test_it_can_cancel_pending_generation(): void
     {
         Queue::fake();
+        $contentId = 0;
+        $publisher = Mockery::mock(DomainEventPublisher::class);
+        $publisher->shouldReceive('publish')
+            ->once()
+            ->withArgs(function (string $name, array $payload) use (&$contentId): bool {
+                return $name === DomainEvents::SUMMARY_CANCELLED
+                    && isset($payload['content_id'])
+                    && $payload['content_id'] === $contentId;
+            });
+        $this->app->instance(DomainEventPublisher::class, $publisher);
 
         $content = Content::query()->create([
             'type' => ContentType::POST,
@@ -69,6 +82,7 @@ class ContentSummaryDispatcherTest extends TestCase
             'locale' => 'en',
             'status' => ContentStatus::DRAFT,
         ]);
+        $contentId = $content->id;
 
         $dispatcher = app(ContentSummaryDispatcher::class);
 

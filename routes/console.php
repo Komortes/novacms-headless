@@ -5,6 +5,7 @@ use App\Enums\ContentType;
 use App\Models\Content;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentEmbeddingGenerator;
+use App\Services\ContentSummaryDispatcher;
 use App\Services\ContentSummaryGenerator;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -14,13 +15,18 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('content:generate-summary {content : Content ID or slug} {--prompt-version=} {--provider=} {--model=}', function () {
-    $provider = $this->option('provider');
-    if (is_string($provider) && $provider !== '') {
-        config()->set('ai.provider', $provider);
-    }
-
+Artisan::command('content:generate-summary {content : Content ID or slug} {--prompt-version=} {--provider=} {--model=} {--sync}', function () {
     $contentArgument = (string) $this->argument('content');
+    $provider = is_string($this->option('provider')) && trim((string) $this->option('provider')) !== ''
+        ? trim((string) $this->option('provider'))
+        : null;
+    $model = is_string($this->option('model')) && trim((string) $this->option('model')) !== ''
+        ? trim((string) $this->option('model'))
+        : null;
+    $promptVersion = is_string($this->option('prompt-version')) && trim((string) $this->option('prompt-version')) !== ''
+        ? trim((string) $this->option('prompt-version'))
+        : null;
+    $sync = (bool) $this->option('sync');
 
     /** @var Content|null $content */
     $content = ctype_digit($contentArgument)
@@ -49,18 +55,46 @@ Artisan::command('content:generate-summary {content : Content ID or slug} {--pro
         return Command::FAILURE;
     }
 
+    if (! $sync) {
+        try {
+            app(ContentSummaryDispatcher::class)->dispatch(
+                content: $content,
+                provider: $provider,
+                model: $model,
+                promptVersion: $promptVersion,
+            );
+        } catch (Throwable $exception) {
+            $this->error('Summary queueing failed: '.$exception->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $this->info('Summary generation queued.');
+        $this->line('Content ID: '.$content->id);
+        $this->line('Status: pending');
+        $this->line('Provider: '.($provider ?? (string) config('ai.provider', 'ollama')));
+        $this->line('Model: '.($model ?? 'default'));
+        $this->line('Prompt version: '.($promptVersion ?? 'active'));
+
+        return Command::SUCCESS;
+    }
+
+    if ($provider !== null) {
+        config()->set('ai.provider', $provider);
+    }
+
     /** @var ContentSummaryGenerator $generator */
     $generator = app(ContentSummaryGenerator::class);
     try {
         $generationOptions = [];
 
-        if (is_string($this->option('model')) && $this->option('model') !== '') {
-            $generationOptions['model'] = (string) $this->option('model');
+        if ($model !== null) {
+            $generationOptions['model'] = $model;
         }
 
         $summary = $generator->generateForContent(
             $content,
-            $this->option('prompt-version') ?: null,
+            $promptVersion,
             $generationOptions,
         );
     } catch (Throwable $exception) {
@@ -77,7 +111,7 @@ Artisan::command('content:generate-summary {content : Content ID or slug} {--pro
     $this->line('Prompt version: '.($summary->prompt_version ?? 'n/a'));
 
     return Command::SUCCESS;
-})->purpose('Generate content AI summary synchronously using configured AI provider');
+})->purpose('Queue content AI summary generation (default), or run synchronously with --sync');
 
 Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Post} {--body=Sample markdown content for NovaCMS.} {--locale=en} {--status=draft} {--type=post}', function () {
     $type = ContentType::tryFrom((string) $this->option('type'));

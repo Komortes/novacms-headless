@@ -5,14 +5,17 @@ namespace Tests\Feature;
 use App\AI\Contracts\AiProviderInterface;
 use App\AI\Data\AiGenerationResult;
 use App\AI\Exceptions\AiProviderException;
+use App\DomainEvents;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryGenerator;
+use App\Services\DomainEventPublisher;
 use Database\Seeders\PromptSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
 use Tests\TestCase;
 
 class ContentSummaryGeneratorTest extends TestCase
@@ -90,6 +93,15 @@ class ContentSummaryGeneratorTest extends TestCase
     public function test_it_marks_summary_as_failed_on_invalid_ai_response(): void
     {
         $this->seed(PromptSeeder::class);
+        $publisher = Mockery::mock(DomainEventPublisher::class);
+        $publisher->shouldReceive('publish')
+            ->once()
+            ->withArgs(function (string $name, array $payload): bool {
+                return $name === DomainEvents::SUMMARY_FAILED
+                    && isset($payload['content_id'])
+                    && is_int($payload['content_id']);
+            });
+        $this->app->instance(DomainEventPublisher::class, $publisher);
 
         app()->bind(AiProviderInterface::class, function () {
             return new class implements AiProviderInterface

@@ -50,6 +50,7 @@ class ContentSummaryGenerator
         $provider = is_string($runContext['provider'] ?? null)
             ? trim((string) $runContext['provider'])
             : (string) config('ai.provider', 'ollama');
+        $publishFailedEvent = ($runContext['publish_failed_event'] ?? true) !== false;
         $selectedModel = is_string($options['model'] ?? null) && trim((string) $options['model']) !== ''
             ? trim((string) $options['model'])
             : null;
@@ -118,6 +119,18 @@ class ContentSummaryGenerator
                 durationMs: $durationMs,
                 message: Str::limit($exception->getMessage(), 500),
             );
+
+            if ($publishFailedEvent) {
+                $this->domainEventPublisher->publish(DomainEvents::SUMMARY_FAILED, [
+                    'content_id' => $content->id,
+                    'summary_id' => $summary->id,
+                    'status' => SummaryStatus::FAILED->value,
+                    'model' => $selectedModel ?? $summary->model,
+                    'prompt_version' => $promptVersion,
+                    'last_error' => $summary->last_error,
+                    'generation_ms' => $summary->generation_ms,
+                ]);
+            }
 
             throw $exception;
         }

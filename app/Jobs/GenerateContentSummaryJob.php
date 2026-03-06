@@ -2,12 +2,14 @@
 
 namespace App\Jobs;
 
+use App\DomainEvents;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryEventLogger;
 use App\Services\ContentSummaryGenerator;
 use App\Services\ContentSummaryQueueVersion;
+use App\Services\DomainEventPublisher;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -132,6 +134,7 @@ class GenerateContentSummaryJob implements ShouldQueue
                 'model' => $resolvedModel,
                 'queue_version' => $this->version,
                 'wait_ms' => $waitMs,
+                'publish_failed_event' => false,
             ],
         );
     }
@@ -181,5 +184,15 @@ class GenerateContentSummaryJob implements ShouldQueue
             queueVersion: $this->version,
             message: 'Summary job exhausted retries: '.Str::limit($exception->getMessage(), 400),
         );
+
+        app(DomainEventPublisher::class)->publish(DomainEvents::SUMMARY_FAILED, [
+            'content_id' => $content->id,
+            'summary_id' => $summary->id,
+            'status' => SummaryStatus::FAILED->value,
+            'model' => $this->model ?? $summary->model,
+            'prompt_version' => $this->promptVersion ?? $summary->prompt_version,
+            'last_error' => $summary->last_error,
+            'queue_version' => $this->version,
+        ]);
     }
 }

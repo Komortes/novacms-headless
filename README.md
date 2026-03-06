@@ -59,6 +59,7 @@ Realtime status in admin/API consumers
 - if hash changed, AI summary status becomes `pending`
 
 ### 2. Async AI Processing
+- on create/update with changed `content_hash`, summary is marked `pending` and job is auto-queued
 - `GenerateContentSummaryJob` is pushed to Redis queue
 - worker sets status to `generating`
 - for long text, map-reduce summarization strategy is applied
@@ -75,6 +76,12 @@ Realtime status in admin/API consumers
 - admin UI can render live transitions:
   - `pending -> generating -> ready`
   - `pending -> generating -> failed`
+- primary events:
+  - `content.updated`
+  - `summary.generated`
+  - `summary.failed`
+  - `summary.cancelled`
+  - `embedding.created`
 
 ### 4. Semantic Search (v1.1)
 - content embeddings are stored in PostgreSQL (`pgvector`)
@@ -224,6 +231,16 @@ php artisan content:reindex-embeddings
 php artisan content:reindex-embeddings sample-post --sync
 ```
 
+Summary generation:
+
+```bash
+# queue generation (default)
+php artisan content:generate-summary sample-post --provider=ollama --model=qwen2.5:1.5b
+
+# force synchronous generation (debug/local)
+php artisan content:generate-summary sample-post --sync --provider=ollama --model=qwen2.5:1.5b
+```
+
 Prompt registry workflow:
 
 - use `/admin/prompts` to create and edit prompt versions
@@ -276,13 +293,13 @@ query {
 }
 ```
 
-## Current Development Focus
+## Current Status
 
-1. complete `contents` and `content_ai_summaries` migrations
-2. implement Filament `ContentResource`
-3. implement `GenerateContentSummaryJob`
-4. finalize Ollama provider integration
-5. broadcast summary-completed events via Reverb
+- async summary + embeddings pipeline is running via Redis/Horizon
+- GraphQL and Filament both use queued summary generation by default
+- prompt registry, compare, import/export flows are active
+- domain events are published to Reverb and Redis Streams
+- Queue Center shows queue depth, pending age, throughput, and success/failure rates
 
 ## License
 
