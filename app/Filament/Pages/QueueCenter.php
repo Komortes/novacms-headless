@@ -7,6 +7,7 @@ use App\Models\Content;
 use App\Models\ContentAiSummary;
 use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryDispatcher;
+use App\Services\RuntimeHealthService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -46,6 +47,11 @@ class QueueCenter extends Page
                 ->icon(Heroicon::ArrowPath)
                 ->color('gray')
                 ->action(fn (): null => null),
+            Action::make('systemHealth')
+                ->label('System Health')
+                ->icon(Heroicon::Signal)
+                ->color('gray')
+                ->url(\App\Filament\Pages\SystemHealth::getUrl()),
         ];
     }
 
@@ -159,6 +165,7 @@ class QueueCenter extends Page
             'recentSuccessRate' => $successRate,
             'recentFailureRate' => $failureRate,
             'avgGeneration' => $this->formatDuration($avgGenerationMs > 0 ? $avgGenerationMs : null),
+            'alerts' => app(RuntimeHealthService::class)->queueAlerts(),
             'pendingItems' => $this->normalizeItems($pendingItems, 'pending', $avgGenerationMs),
             'generatingItems' => $this->normalizeItems($generatingItems, 'generating', $avgGenerationMs),
             'failedItems' => $this->normalizeItems($failedItems, 'failed', $avgGenerationMs),

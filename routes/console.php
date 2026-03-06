@@ -7,6 +7,7 @@ use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\ContentSummaryGenerator;
+use App\Services\RuntimeHealthService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Console\Command\Command;
@@ -234,3 +235,52 @@ Artisan::command('content:reindex-embeddings {content? : Optional Content ID or 
 
     return Command::SUCCESS;
 })->purpose('Reindex embeddings for one content or all content records');
+
+Artisan::command('stack:smoke {--json}', function (RuntimeHealthService $health): int {
+    $report = $health->collect();
+
+    if ((bool) $this->option('json')) {
+        $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+
+        return $report['ok'] ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    $rows = collect($report['checks'])
+        ->map(fn (array $check): array => [
+            $check['component'],
+            strtoupper((string) $check['status']),
+            (string) $check['message'],
+            ($check['meta'] ?? []) !== [] ? (json_encode($check['meta'], JSON_UNESCAPED_SLASHES) ?: '{}') : '-',
+        ])
+        ->all();
+
+    $this->table(['Component', 'Status', 'Message', 'Meta'], $rows);
+
+    if (($report['alerts'] ?? []) !== []) {
+        $this->newLine();
+        $this->warn('Operational alerts:');
+
+        foreach ($report['alerts'] as $alert) {
+            $this->line(sprintf(
+                '- [%s] %s | value=%s threshold=%s',
+                strtoupper((string) $alert['severity']),
+                (string) $alert['title'],
+                (string) $alert['value'],
+                (string) $alert['threshold'],
+            ));
+        }
+    }
+
+    $this->newLine();
+    $this->line('Generated at: '.(string) ($report['generated_at'] ?? now()->toIso8601String()));
+
+    if ($report['ok']) {
+        $this->info('Smoke check passed.');
+
+        return Command::SUCCESS;
+    }
+
+    $this->error('Smoke check failed.');
+
+    return Command::FAILURE;
+})->purpose('Run runtime smoke checks for DB/Redis/Horizon/Reverb/Ollama and queue alerts');
