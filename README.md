@@ -12,6 +12,7 @@ It stores and serves structured content through APIs and processes AI tasks asyn
 - real-time generation status updates
 - semantic search with vector embeddings
 - versioned prompt management for controlled AI outputs
+- runtime smoke checks and health dashboard for ops visibility
 
 ## System Architecture
 
@@ -257,11 +258,22 @@ php artisan queue:retry all
 php artisan queue:flush
 ```
 
+Runtime smoke checks:
+
+```bash
+# human-readable output
+php artisan stack:smoke
+
+# machine-readable JSON (CI friendly)
+php artisan stack:smoke --json
+```
+
 ## API Endpoints
 
 - GraphQL: `/graphql`
 - Admin panel: `/admin`
 - AI settings page: `/admin/settings/ai`
+- System health page: `/admin/system-health`
 - Prompt registry: `/admin/prompts`
 - Prompt compare: `/admin/prompts/compare`
 
@@ -300,6 +312,7 @@ query {
 - prompt registry, compare, import/export flows are active
 - domain events are published to Reverb and Redis Streams
 - Queue Center shows queue depth, pending age, throughput, and success/failure rates
+- System Health page verifies DB/pgvector, Redis, Horizon, Reverb, and Ollama
 
 ## License
 

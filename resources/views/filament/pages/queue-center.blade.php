@@ -12,6 +12,21 @@
             </div>
         </section>
 
+        @if (count($alerts) > 0)
+            <section class="rounded-xl border border-rose-200 bg-white p-4 shadow-sm dark:border-rose-800/50 dark:bg-gray-900">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Queue Alerts</h3>
+                <div class="mt-3 grid gap-2 md:grid-cols-2">
+                    @foreach ($alerts as $alert)
+                        <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm dark:border-rose-800/50 dark:bg-rose-900/20">
+                            <p class="font-semibold text-rose-900 dark:text-rose-100">{{ $alert['title'] }}</p>
+                            <p class="text-rose-800 dark:text-rose-200">{{ $alert['message'] }}</p>
+                            <p class="mt-1 text-xs text-rose-700 dark:text-rose-300">Value: {{ $alert['value'] }} | Threshold: {{ $alert['threshold'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         <section class="grid gap-4 md:grid-cols-4">
             <article class="rounded-xl border border-amber-200 bg-white p-4 shadow-sm dark:border-amber-800/50 dark:bg-gray-900">
                 <p class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Pending</p>
