@@ -7,6 +7,7 @@ use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
 use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -18,6 +19,7 @@ class GenerateContentSummaryMutationTest extends TestCase
     public function test_generate_content_summary_mutation_queues_job_and_returns_pending_summary(): void
     {
         Queue::fake();
+        $this->actingAs(User::factory()->create());
 
         $content = Content::query()->create([
             'type' => ContentType::POST,
@@ -60,4 +62,3 @@ GRAPHQL,
         ]);
     }
 }
-

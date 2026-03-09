@@ -282,6 +282,7 @@ php artisan stack:smoke --json
 - System health page: `/admin/system-health`
 - Prompt registry: `/admin/prompts`
 - Prompt compare: `/admin/prompts/compare`
+- API guide: [docs/graphql-api.md](/Users/oleksandrskoruk/projects/novacms-headless/docs/graphql-api.md)
 
 ### Semantic GraphQL Queries
 
