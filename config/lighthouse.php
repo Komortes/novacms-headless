@@ -24,7 +24,7 @@ return [
         ],
     ],
 
-    'guards' => ['web'],
+    'guards' => ['web', 'api-token'],
 
     'security' => [
         'max_query_complexity' => (int) env('LIGHTHOUSE_SECURITY_MAX_QUERY_COMPLEXITY', 80),

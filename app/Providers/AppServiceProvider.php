@@ -8,10 +8,12 @@ use App\Models\Content;
 use App\Models\Prompt;
 use App\Observers\ContentObserver;
 use App\Observers\PromptObserver;
+use App\Services\ApiTokenAuthenticator;
 use App\Services\AiSettingsManager;
 use App\Services\PromptRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -36,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
         app(AiSettingsManager::class)->applyConfigOverrides();
         Content::observe(ContentObserver::class);
         Prompt::observe(PromptObserver::class);
+
+        Auth::viaRequest('api-token', function (Request $request) {
+            return app(ApiTokenAuthenticator::class)->authenticate($request);
+        });
 
         RateLimiter::for('ai-requests', function (): Limit {
             return Limit::perMinute((int) config('ai.jobs.rate_limit_per_minute', 60))

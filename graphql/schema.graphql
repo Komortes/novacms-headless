@@ -71,16 +71,16 @@ type SemanticContentMatch {
 }
 
 type Query {
-    me: User @auth(guards: ["web"])
+    me: User @auth(guards: ["web", "api-token"])
 
     user(
       id: ID @eq @rules(apply: ["prohibits:email", "required_without:email"])
       email: String @eq @rules(apply: ["prohibits:id", "required_without:id", "email"])
-    ): User @guard(with: ["web"]) @find
+    ): User @guard(with: ["web", "api-token"]) @apiAbility(ability: "graphql:admin") @find
 
     users(
       name: String @where(operator: "like")
-    ): [User!]! @guard(with: ["web"]) @paginate(defaultCount: 10, maxCount: 25)
+    ): [User!]! @guard(with: ["web", "api-token"]) @apiAbility(ability: "graphql:admin") @paginate(defaultCount: 10, maxCount: 25)
 
     content(
         id: ID! @rules(apply: ["integer", "exists:contents,id"])
@@ -99,23 +99,28 @@ type Query {
         @paginate(builder: "App\\GraphQL\\Queries\\ContentsBuilder", defaultCount: 20, maxCount: 50)
 
     contentAiSummary(id: ID! @eq @rules(apply: ["integer", "exists:content_ai_summaries,id"])): ContentAiSummary
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:admin")
         @find(model: "App\\Models\\ContentAiSummary")
     contentAiSummaries: [ContentAiSummary!]!
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:admin")
         @paginate(model: "App\\Models\\ContentAiSummary", defaultCount: 20, maxCount: 50)
 
     prompt(id: ID! @eq @rules(apply: ["integer", "exists:prompts,id"])): Prompt
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:admin")
         @find(model: "App\\Models\\Prompt")
     prompts: [Prompt!]!
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:admin")
         @paginate(model: "App\\Models\\Prompt", defaultCount: 20, maxCount: 50)
     activePrompt(
         name: String! @rules(apply: ["string", "min:2", "max:120"])
         version: String @rules(apply: ["nullable", "string", "max:40"])
     ): Prompt
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:admin")
         @field(resolver: "App\\GraphQL\\Queries\\ActivePromptQuery")
     semanticSearch(
         query: String! @rules(apply: ["string", "min:3", "max:500"]),
@@ -148,7 +153,8 @@ type Mutation {
         locale: String = "en"
         status: ContentStatus = DRAFT
     ): Content
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:write")
         @throttle(name: "graphql-write")
         @field(resolver: "App\\GraphQL\\Mutations\\CreateContentMutation")
 
@@ -161,7 +167,8 @@ type Mutation {
         locale: String
         status: ContentStatus
     ): Content
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:write")
         @throttle(name: "graphql-write")
         @field(resolver: "App\\GraphQL\\Mutations\\UpdateContentMutation")
 
@@ -169,7 +176,8 @@ type Mutation {
         content_id: ID! @rules(apply: ["integer", "exists:contents,id"])
         prompt_version: String @rules(apply: ["nullable", "string", "max:40"])
     ): ContentAiSummary
-        @guard(with: ["web"])
+        @guard(with: ["web", "api-token"])
+        @apiAbility(ability: "graphql:write")
         @throttle(name: "graphql-write")
         @field(resolver: "App\\GraphQL\\Mutations\\GenerateContentSummaryMutation")
 }

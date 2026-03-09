@@ -6,15 +6,45 @@ NovaCMS exposes a schema-first GraphQL API at `/graphql`.
 
 - Public clients can read published content and run semantic search against published records only.
 - Authenticated `web` users can access drafts, prompts, AI summaries, and write mutations.
-- Prompt and summary management queries are not public.
+- Authenticated `api-token` clients can access extra capabilities only if the token has the required ability.
+- Prompt and summary management queries are not public by default.
 
 ## Authentication
 
-Current auth mode uses the Laravel `web` guard.
+NovaCMS supports two GraphQL auth modes:
+
+- `web` session auth for Filament/admin users
+- `api-token` bearer auth for external API clients
+
+Session auth:
 
 - Browser/session clients can authenticate through the Filament login flow.
 - Authenticated GraphQL requests reuse the same session cookie.
-- Mutations and internal queries require an authenticated session.
+
+Bearer token auth:
+
+- Tokens are issued per user and returned once as `Bearer nova_<id>.<secret>`.
+- Tokens are hashed at rest and support revocation and expiry.
+- Use CLI commands to manage them:
+
+```bash
+php artisan api-token:create test@example.com external-client --ability=graphql:write --ability=graphql:read-internal
+php artisan api-token:list test@example.com
+php artisan api-token:revoke 1
+```
+
+Example header:
+
+```http
+Authorization: Bearer nova_12.yourGeneratedSecret
+```
+
+Token abilities:
+
+- `graphql:read-internal` allows draft and archived reads in content queries and semantic search.
+- `graphql:write` allows `createContent`, `updateContent`, and `generateContentSummary`.
+- `graphql:admin` allows internal registry and AI summary queries.
+- `*` grants full token access.
 
 ## Request Limits
 
@@ -118,6 +148,18 @@ query {
 }
 ```
 
+Read draft content with bearer token that has `graphql:read-internal`:
+
+```graphql
+query DraftPreview($id: ID!) {
+  content(id: $id) {
+    id
+    slug
+    status
+  }
+}
+```
+
 ## Authenticated Mutations
 
 Create content:
@@ -174,3 +216,5 @@ mutation GenerateSummary($id: ID!) {
 - `locale` accepts `en` or region variants such as `en-US`.
 - Search `limit` is capped at `20`.
 - `min_score` must be between `-1` and `1`.
+- Token-authenticated writes require `graphql:write`.
+- Token-authenticated admin queries require `graphql:admin`.
