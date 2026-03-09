@@ -71,41 +71,71 @@ type SemanticContentMatch {
 }
 
 type Query {
+    me: User @auth(guards: ["web"])
+
     user(
       id: ID @eq @rules(apply: ["prohibits:email", "required_without:email"])
       email: String @eq @rules(apply: ["prohibits:id", "required_without:id", "email"])
-    ): User @find
+    ): User @guard(with: ["web"]) @find
 
     users(
       name: String @where(operator: "like")
-    ): [User!]! @paginate(defaultCount: 10)
+    ): [User!]! @guard(with: ["web"]) @paginate(defaultCount: 10, maxCount: 25)
 
-    content(id: ID! @eq): Content @find(model: "App\\Models\\Content")
-    contents: [Content!]! @paginate(model: "App\\Models\\Content", defaultCount: 20)
+    content(
+        id: ID! @rules(apply: ["integer", "exists:contents,id"])
+        locale: String @rules(apply: ["nullable", "regex:/^[a-z]{2}(?:-[A-Z]{2})?$/"])
+        status: ContentStatus
+        type: ContentType
+    ): Content
+        @throttle(name: "graphql-read")
+        @field(resolver: "App\\GraphQL\\Queries\\ContentQuery")
+    contents(
+        locale: String @rules(apply: ["nullable", "regex:/^[a-z]{2}(?:-[A-Z]{2})?$/"])
+        status: ContentStatus
+        type: ContentType
+    ): [Content!]!
+        @throttle(name: "graphql-read")
+        @paginate(builder: "App\\GraphQL\\Queries\\ContentsBuilder", defaultCount: 20, maxCount: 50)
 
-    contentAiSummary(id: ID! @eq): ContentAiSummary @find(model: "App\\Models\\ContentAiSummary")
-    contentAiSummaries: [ContentAiSummary!]! @paginate(model: "App\\Models\\ContentAiSummary", defaultCount: 20)
+    contentAiSummary(id: ID! @eq @rules(apply: ["integer", "exists:content_ai_summaries,id"])): ContentAiSummary
+        @guard(with: ["web"])
+        @find(model: "App\\Models\\ContentAiSummary")
+    contentAiSummaries: [ContentAiSummary!]!
+        @guard(with: ["web"])
+        @paginate(model: "App\\Models\\ContentAiSummary", defaultCount: 20, maxCount: 50)
 
-    prompt(id: ID! @eq): Prompt @find(model: "App\\Models\\Prompt")
-    prompts: [Prompt!]! @paginate(model: "App\\Models\\Prompt", defaultCount: 20)
-    activePrompt(name: String!, version: String): Prompt @field(resolver: "App\\GraphQL\\Queries\\ActivePromptQuery")
+    prompt(id: ID! @eq @rules(apply: ["integer", "exists:prompts,id"])): Prompt
+        @guard(with: ["web"])
+        @find(model: "App\\Models\\Prompt")
+    prompts: [Prompt!]!
+        @guard(with: ["web"])
+        @paginate(model: "App\\Models\\Prompt", defaultCount: 20, maxCount: 50)
+    activePrompt(
+        name: String! @rules(apply: ["string", "min:2", "max:120"])
+        version: String @rules(apply: ["nullable", "string", "max:40"])
+    ): Prompt
+        @guard(with: ["web"])
+        @field(resolver: "App\\GraphQL\\Queries\\ActivePromptQuery")
     semanticSearch(
-        query: String!,
-        limit: Int = 10,
-        locale: String,
+        query: String! @rules(apply: ["string", "min:3", "max:500"]),
+        limit: Int = 10 @rules(apply: ["integer", "min:1", "max:20"]),
+        locale: String @rules(apply: ["nullable", "regex:/^[a-z]{2}(?:-[A-Z]{2})?$/"]),
         status: ContentStatus,
         type: ContentType,
-        min_score: Float
+        min_score: Float @rules(apply: ["nullable", "numeric", "between:-1,1"])
     ): [SemanticContentMatch!]!
+        @throttle(name: "graphql-search")
         @field(resolver: "App\\GraphQL\\Queries\\SemanticSearchQuery")
     relatedContent(
-        content_id: ID!,
-        limit: Int = 5,
-        locale: String,
+        content_id: ID! @rules(apply: ["integer", "exists:contents,id"]),
+        limit: Int = 5 @rules(apply: ["integer", "min:1", "max:20"]),
+        locale: String @rules(apply: ["nullable", "regex:/^[a-z]{2}(?:-[A-Z]{2})?$/"]),
         status: ContentStatus,
         type: ContentType,
-        min_score: Float
+        min_score: Float @rules(apply: ["nullable", "numeric", "between:-1,1"])
     ): [SemanticContentMatch!]!
+        @throttle(name: "graphql-search")
         @field(resolver: "App\\GraphQL\\Queries\\RelatedContentQuery")
 }
 
@@ -117,22 +147,31 @@ type Mutation {
         body: String!
         locale: String = "en"
         status: ContentStatus = DRAFT
-    ): Content @create(model: "App\\Models\\Content")
+    ): Content
+        @guard(with: ["web"])
+        @throttle(name: "graphql-write")
+        @field(resolver: "App\\GraphQL\\Mutations\\CreateContentMutation")
 
     updateContent(
-        id: ID!
+        id: ID! @rules(apply: ["integer", "exists:contents,id"])
         type: ContentType
         slug: String
         title: String
         body: String
         locale: String
         status: ContentStatus
-    ): Content @update(model: "App\\Models\\Content")
+    ): Content
+        @guard(with: ["web"])
+        @throttle(name: "graphql-write")
+        @field(resolver: "App\\GraphQL\\Mutations\\UpdateContentMutation")
 
     generateContentSummary(
-        content_id: ID!
-        prompt_version: String
-    ): ContentAiSummary @field(resolver: "App\\GraphQL\\Mutations\\GenerateContentSummaryMutation")
+        content_id: ID! @rules(apply: ["integer", "exists:contents,id"])
+        prompt_version: String @rules(apply: ["nullable", "string", "max:40"])
+    ): ContentAiSummary
+        @guard(with: ["web"])
+        @throttle(name: "graphql-write")
+        @field(resolver: "App\\GraphQL\\Mutations\\GenerateContentSummaryMutation")
 }
 
 type User {

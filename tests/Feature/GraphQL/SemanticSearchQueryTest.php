@@ -27,7 +27,7 @@ class SemanticSearchQueryTest extends TestCase
             'title' => 'Top Match',
             'body' => 'Body',
             'locale' => 'en',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         $second = Content::create([
@@ -36,7 +36,7 @@ class SemanticSearchQueryTest extends TestCase
             'title' => 'Second Match',
             'body' => 'Body',
             'locale' => 'en',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         $otherLocale = Content::create([
@@ -45,7 +45,7 @@ class SemanticSearchQueryTest extends TestCase
             'title' => 'Other Locale',
             'body' => 'Body',
             'locale' => 'uk',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         ContentEmbedding::create([
@@ -98,6 +98,68 @@ GRAPHQL,
         $response->assertJsonMissingPath('errors');
         $response->assertJsonPath('data.semanticSearch.0.content.slug', 'top-match');
         $response->assertJsonPath('data.semanticSearch.1.content.slug', 'second-match');
+    }
+
+    public function test_public_semantic_search_only_returns_published_content(): void
+    {
+        $this->mockEmbeddingProvider([1.0, 0.0, 0.0]);
+
+        $published = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'published-match',
+            'title' => 'Published Match',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        $draft = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'draft-match',
+            'title' => 'Draft Match',
+            'body' => 'Body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        ContentEmbedding::create([
+            'content_id' => $published->id,
+            'source' => 'body',
+            'chunk_index' => 0,
+            'content_hash' => $published->content_hash,
+            'provider' => 'ollama',
+            'model' => 'nomic-embed-text',
+            'dimensions' => 3,
+            'embedding' => [1.0, 0.0, 0.0],
+        ]);
+
+        ContentEmbedding::create([
+            'content_id' => $draft->id,
+            'source' => 'body',
+            'chunk_index' => 0,
+            'content_hash' => $draft->content_hash,
+            'provider' => 'ollama',
+            'model' => 'nomic-embed-text',
+            'dimensions' => 3,
+            'embedding' => [1.0, 0.0, 0.0],
+        ]);
+
+        $response = $this->postJson('/graphql', [
+            'query' => <<<'GRAPHQL'
+query {
+  semanticSearch(query: "search text", limit: 5, status: DRAFT) {
+    content {
+      slug
+    }
+  }
+}
+GRAPHQL,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonMissingPath('errors');
+        $response->assertJsonCount(1, 'data.semanticSearch');
+        $response->assertJsonPath('data.semanticSearch.0.content.slug', 'published-match');
     }
 
     public function test_semantic_search_can_filter_by_status_type_and_min_score(): void
@@ -204,7 +266,7 @@ GRAPHQL,
             'title' => 'Base Content',
             'body' => 'Body',
             'locale' => 'en',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         $related = Content::create([
@@ -213,7 +275,7 @@ GRAPHQL,
             'title' => 'Related Content',
             'body' => 'Body',
             'locale' => 'en',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         $far = Content::create([
@@ -222,7 +284,7 @@ GRAPHQL,
             'title' => 'Far Content',
             'body' => 'Body',
             'locale' => 'en',
-            'status' => ContentStatus::DRAFT,
+            'status' => ContentStatus::PUBLISHED,
         ]);
 
         ContentEmbedding::create([
@@ -392,6 +454,25 @@ GRAPHQL,
         $response->assertJsonMissingPath('errors');
         $response->assertJsonCount(1, 'data.relatedContent');
         $response->assertJsonPath('data.relatedContent.0.content.slug', 'matching-related');
+    }
+
+    public function test_semantic_search_rejects_invalid_limit(): void
+    {
+        $this->mockEmbeddingProvider([1.0, 0.0, 0.0]);
+
+        $response = $this->postJson('/graphql', [
+            'query' => <<<'GRAPHQL'
+query {
+  semanticSearch(query: "search text", limit: 999) {
+    score
+  }
+}
+GRAPHQL,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.semanticSearch', null);
+        $response->assertJsonPath('errors.0.extensions.validation.limit.0', 'The limit field must not be greater than 20.');
     }
 
     /**

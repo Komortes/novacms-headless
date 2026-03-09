@@ -11,6 +11,7 @@ use App\Observers\PromptObserver;
 use App\Services\AiSettingsManager;
 use App\Services\PromptRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -39,6 +40,26 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('ai-requests', function (): Limit {
             return Limit::perMinute((int) config('ai.jobs.rate_limit_per_minute', 60))
                 ->by('novacms-ai-global');
+        });
+
+        RateLimiter::for('graphql-route', function (Request $request): Limit {
+            return Limit::perMinute((int) config('api.graphql.route_per_minute', 120))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        });
+
+        RateLimiter::for('graphql-read', function (Request $request): Limit {
+            return Limit::perMinute((int) config('api.graphql.read_per_minute', 120))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        });
+
+        RateLimiter::for('graphql-search', function (Request $request): Limit {
+            return Limit::perMinute((int) config('api.graphql.search_per_minute', 30))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        });
+
+        RateLimiter::for('graphql-write', function (Request $request): Limit {
+            return Limit::perMinute((int) config('api.graphql.write_per_minute', 20))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
         });
     }
 }
