@@ -274,6 +274,19 @@ php artisan stack:smoke
 php artisan stack:smoke --json
 ```
 
+Live end-to-end smoke:
+
+```bash
+# validates DB + Redis + Ollama, runs queued summary + embeddings, then checks semantic search
+php artisan stack:e2e-smoke
+
+# keep the generated smoke record for manual inspection
+php artisan stack:e2e-smoke --keep-records
+
+# require full local runtime, including Horizon and Reverb
+php artisan stack:e2e-smoke --require-horizon --require-reverb
+```
+
 ## API Endpoints
 
 - GraphQL: `/graphql`
@@ -334,6 +347,7 @@ query {
 - domain events are published to Reverb and Redis Streams
 - Queue Center shows queue depth, pending age, throughput, and success/failure rates
 - System Health page verifies DB/pgvector, Redis, Horizon, Reverb, and Ollama
+- live smoke command validates queued summary, queued embeddings, and semantic search against the running stack
 
 ## License
 
