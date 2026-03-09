@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Models\Content;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 
 class GraphqlContentAccess
@@ -13,7 +12,7 @@ class GraphqlContentAccess
     /**
      * @param  array{locale?: string|null, status?: string|null, type?: string|null}  $filters
      */
-    public function query(array $filters, ?Authenticatable $user): Builder
+    public function query(array $filters, bool $allowInternalStatuses = false): Builder
     {
         $query = Content::query();
         $status = isset($filters['status']) && is_string($filters['status'])
@@ -26,7 +25,7 @@ class GraphqlContentAccess
             ? trim($filters['locale'])
             : null;
 
-        if ($user === null) {
+        if (! $allowInternalStatuses) {
             $query->where('status', ContentStatus::PUBLISHED->value);
         } elseif ($status instanceof ContentStatus) {
             $query->where('status', $status->value);

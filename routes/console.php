@@ -2,7 +2,9 @@
 
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
+use App\Models\ApiAccessToken;
 use App\Models\Content;
+use App\Models\User;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentEmbeddingReindexer;
@@ -147,6 +149,119 @@ Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Pos
 
     return Command::SUCCESS;
 })->purpose('Create a sample content record for local AI summary testing');
+
+Artisan::command('api-token:create {user : User ID or email} {name : Token label} {--ability=* : Repeatable token abilities} {--expires-days=}', function () {
+    $userArgument = trim((string) $this->argument('user'));
+    $name = trim((string) $this->argument('name'));
+    $expiresDays = $this->option('expires-days');
+    $abilities = collect((array) $this->option('ability'))
+        ->map(fn (mixed $ability): string => trim((string) $ability))
+        ->filter()
+        ->values()
+        ->all();
+
+    $user = ctype_digit($userArgument)
+        ? User::query()->find((int) $userArgument)
+        : User::query()->where('email', $userArgument)->first();
+
+    if (! $user) {
+        $this->error("User not found for [{$userArgument}].");
+
+        return Command::FAILURE;
+    }
+
+    if ($name === '') {
+        $this->error('Token name must not be empty.');
+
+        return Command::FAILURE;
+    }
+
+    if ($abilities === []) {
+        $abilities = ['graphql:read-internal'];
+    }
+
+    $expiresAt = null;
+
+    if ($expiresDays !== null && trim((string) $expiresDays) !== '') {
+        $days = (int) $expiresDays;
+
+        if ($days < 1) {
+            $this->error('--expires-days must be at least 1.');
+
+            return Command::FAILURE;
+        }
+
+        $expiresAt = now()->addDays($days);
+    }
+
+    $issued = $user->issueApiToken($name, $abilities, $expiresAt);
+    /** @var ApiAccessToken $token */
+    $token = $issued['access_token'];
+
+    $this->info('API token created.');
+    $this->line('Token ID: '.$token->id);
+    $this->line('User: '.$user->email);
+    $this->line('Abilities: '.implode(', ', $abilities));
+    $this->line('Expires at: '.($token->expires_at?->toDateTimeString() ?? 'never'));
+    $this->newLine();
+    $this->warn('Store this token now. It will not be shown again.');
+    $this->line((string) $issued['plain_text_token']);
+
+    return Command::SUCCESS;
+})->purpose('Issue an external API bearer token for a user');
+
+Artisan::command('api-token:list {user : User ID or email}', function () {
+    $userArgument = trim((string) $this->argument('user'));
+
+    $user = ctype_digit($userArgument)
+        ? User::query()->find((int) $userArgument)
+        : User::query()->where('email', $userArgument)->first();
+
+    if (! $user) {
+        $this->error("User not found for [{$userArgument}].");
+
+        return Command::FAILURE;
+    }
+
+    $rows = $user->apiAccessTokens()
+        ->get()
+        ->map(fn (ApiAccessToken $token): array => [
+            $token->id,
+            $token->name,
+            implode(', ', $token->abilities ?? []),
+            $token->last_used_at?->toDateTimeString() ?? '-',
+            $token->expires_at?->toDateTimeString() ?? '-',
+            $token->revoked_at?->toDateTimeString() ?? '-',
+        ])
+        ->all();
+
+    $this->table(['ID', 'Name', 'Abilities', 'Last Used', 'Expires', 'Revoked'], $rows);
+
+    return Command::SUCCESS;
+})->purpose('List external API bearer tokens for a user');
+
+Artisan::command('api-token:revoke {token : Token ID}', function () {
+    $tokenId = (int) $this->argument('token');
+    $token = ApiAccessToken::query()->find($tokenId);
+
+    if (! $token) {
+        $this->error("API token [{$tokenId}] not found.");
+
+        return Command::FAILURE;
+    }
+
+    if ($token->revoked_at !== null) {
+        $this->line("API token [{$tokenId}] is already revoked.");
+
+        return Command::SUCCESS;
+    }
+
+    $token->revoke();
+
+    $this->info("API token [{$tokenId}] revoked.");
+
+    return Command::SUCCESS;
+})->purpose('Revoke an external API bearer token');
 
 Artisan::command('content:reindex-embeddings {content? : Optional Content ID or slug} {--provider=} {--model=} {--mode=incremental : incremental|full} {--sync}', function () {
     $contentArgument = $this->argument('content');

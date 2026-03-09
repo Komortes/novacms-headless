@@ -256,6 +256,19 @@ Prompt registry workflow:
 - use `Export all`, `Export active`, and row-level `Export` for JSON bundles
 - use `Import JSON` to upsert exported bundles back into the registry
 
+External API tokens:
+
+```bash
+# issue a bearer token for external GraphQL clients
+php artisan api-token:create test@example.com external-client --ability=graphql:write --ability=graphql:read-internal
+
+# inspect issued tokens for a user
+php artisan api-token:list test@example.com
+
+# revoke a token by id
+php artisan api-token:revoke 1
+```
+
 Failed jobs (DLQ-style operational flow):
 
 ```bash
