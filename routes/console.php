@@ -8,6 +8,7 @@ use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentEmbeddingReindexer;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\ContentSummaryGenerator;
+use App\Services\RuntimeE2eSmokeService;
 use App\Services\RuntimeHealthService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -327,3 +328,42 @@ Artisan::command('stack:smoke {--json}', function (RuntimeHealthService $health)
 
     return Command::FAILURE;
 })->purpose('Run runtime smoke checks for DB/Redis/Horizon/Reverb/Ollama and queue alerts');
+
+Artisan::command('stack:e2e-smoke {--json} {--keep-records} {--provider=} {--summary-model=} {--embedding-provider=} {--embedding-model=} {--prompt-version=} {--require-horizon} {--require-reverb} {--timeout=60}', function (RuntimeE2eSmokeService $smoke): int {
+    $report = $smoke->run([
+        'provider' => $this->option('provider'),
+        'summary_model' => $this->option('summary-model'),
+        'embedding_provider' => $this->option('embedding-provider'),
+        'embedding_model' => $this->option('embedding-model'),
+        'prompt_version' => $this->option('prompt-version'),
+        'keep_records' => (bool) $this->option('keep-records'),
+        'require_horizon' => (bool) $this->option('require-horizon'),
+        'require_reverb' => (bool) $this->option('require-reverb'),
+        'timeout_seconds' => (int) $this->option('timeout'),
+    ]);
+
+    if ((bool) $this->option('json')) {
+        $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+
+        return $report['ok'] ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    $rows = collect($report['steps'])
+        ->map(fn (array $step): array => [
+            $step['name'],
+            strtoupper((string) $step['status']),
+            (string) $step['message'],
+            ($step['meta'] ?? []) !== [] ? (json_encode($step['meta'], JSON_UNESCAPED_SLASHES) ?: '{}') : '-',
+        ])
+        ->all();
+
+    $this->table(['Step', 'Status', 'Message', 'Meta'], $rows);
+
+    if ($report['content_id'] !== null) {
+        $this->newLine();
+        $this->line('Retained content ID: '.$report['content_id']);
+        $this->line('Slug: '.$report['slug']);
+    }
+
+    return $report['ok'] ? Command::SUCCESS : Command::FAILURE;
+})->purpose('Run a live end-to-end smoke scenario through queue jobs, Ollama, pgvector search, and cleanup');
