@@ -11,8 +11,7 @@ class ContentQuery
 {
     public function __construct(
         private readonly GraphqlContentAccess $contentAccess,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{id: int|string, locale?: string|null, status?: string|null, type?: string|null}  $args

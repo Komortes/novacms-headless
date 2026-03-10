@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\SummaryStatus;
 use App\Models\Content;
-use App\Models\ContentEmbedding;
 use App\Models\ContentAiSummary;
+use App\Models\ContentEmbedding;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\QueueWorkerRunner;

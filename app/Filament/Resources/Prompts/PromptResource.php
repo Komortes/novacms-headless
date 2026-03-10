@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Prompts;
 
+use App\Filament\Resources\Prompts\Pages\ComparePrompts;
 use App\Filament\Resources\Prompts\Pages\CreatePrompt;
 use App\Filament\Resources\Prompts\Pages\EditPrompt;
 use App\Filament\Resources\Prompts\Pages\ListPrompts;
-use App\Filament\Resources\Prompts\Pages\ComparePrompts;
 use App\Filament\Resources\Prompts\Schemas\PromptForm;
 use App\Filament\Resources\Prompts\Tables\PromptsTable;
 use App\Models\Prompt;

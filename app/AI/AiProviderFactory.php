@@ -12,8 +12,7 @@ class AiProviderFactory
 {
     public function __construct(
         private readonly HttpFactory $http,
-    ) {
-    }
+    ) {}
 
     public function make(?string $provider = null): AiProviderInterface
     {
@@ -37,4 +36,3 @@ class AiProviderFactory
         };
     }
 }
-

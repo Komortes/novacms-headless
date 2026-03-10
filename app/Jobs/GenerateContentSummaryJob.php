@@ -66,8 +66,7 @@ class GenerateContentSummaryJob implements ShouldQueue
         AiSettingsManager $aiSettingsManager,
         ContentSummaryQueueVersion $queueVersion,
         ContentSummaryEventLogger $eventLogger,
-    ): void
-    {
+    ): void {
         $content = Content::query()
             ->with(['summary', 'summaryEvents' => fn ($query) => $query->latest('id')->limit(20)])
             ->find($this->contentId);

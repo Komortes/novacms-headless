@@ -17,8 +17,7 @@ class DomainEventBroadcasted implements ShouldBroadcastNow
      */
     public function __construct(
         public readonly array $envelope,
-    ) {
-    }
+    ) {}
 
     public function broadcastOn(): array
     {

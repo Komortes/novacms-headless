@@ -82,4 +82,3 @@ class PromptRegistryTest extends TestCase
         $this->assertSame('0.9.0', $active?->version);
     }
 }
-

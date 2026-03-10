@@ -35,7 +35,7 @@ class PromptRegistry
             $parts[] = $version;
         }
 
-        throw (new ModelNotFoundException())->setModel(Prompt::class, $parts);
+        throw (new ModelNotFoundException)->setModel(Prompt::class, $parts);
     }
 
     /**
@@ -86,4 +86,3 @@ class PromptRegistry
         });
     }
 }
-

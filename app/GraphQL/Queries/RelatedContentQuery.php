@@ -13,8 +13,7 @@ class RelatedContentQuery
 {
     public function __construct(
         private readonly SemanticSearchService $service,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{

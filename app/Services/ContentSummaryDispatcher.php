@@ -13,16 +13,14 @@ class ContentSummaryDispatcher
         private readonly ContentSummaryQueueVersion $queueVersion,
         private readonly ContentSummaryEventLogger $eventLogger,
         private readonly DomainEventPublisher $domainEventPublisher,
-    ) {
-    }
+    ) {}
 
     public function dispatch(
         Content $content,
         ?string $provider = null,
         ?string $model = null,
         ?string $promptVersion = null,
-    ): void
-    {
+    ): void {
         $summary = $content->summary()->firstOrCreate(
             ['content_id' => $content->id],
             ['status' => SummaryStatus::PENDING],

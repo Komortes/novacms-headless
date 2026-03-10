@@ -60,8 +60,7 @@ class GenerateContentEmbeddingsJob implements ShouldQueue
         ContentEmbeddingGenerator $generator,
         AiSettingsManager $aiSettingsManager,
         DomainEventPublisher $domainEventPublisher,
-    ): void
-    {
+    ): void {
         $content = Content::query()->find($this->contentId);
 
         if (! $content) {

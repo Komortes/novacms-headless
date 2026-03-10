@@ -208,6 +208,9 @@ DOMAIN_EVENTS_STREAM_MAXLEN=10000
 # one-time setup for dependencies + infra + key + migrations + prompts
 make up
 
+# import the bundled demo dataset for a usable admin walkthrough
+make demo-data
+
 # pull local Ollama models if they are not available yet
 make models
 
@@ -259,6 +262,28 @@ php artisan content:generate-summary sample-post --provider=ollama --model=qwen2
 # force synchronous generation (debug/local)
 php artisan content:generate-summary sample-post --sync --provider=ollama --model=qwen2.5:1.5b
 ```
+
+Content bundle workflow:
+
+```bash
+# import the bundled demo dataset
+php artisan content:import --demo
+
+# export current content to a reusable JSON bundle
+php artisan content:export
+
+# export only published english content
+php artisan content:export --status=published --locale=en
+
+# import a custom bundle back into the system
+php artisan content:import storage/app/exports/content-bundle-20260310-120000.json
+```
+
+Demo dataset notes:
+
+- includes published records with ready summaries so the admin UI is useful immediately
+- includes one failed summary to make Queue Center retry flows visible on first run
+- does not ship embeddings, so run `php artisan content:reindex-embeddings --mode=full` after import if you want semantic search populated from the dataset
 
 Prompt registry workflow:
 
@@ -318,6 +343,19 @@ php artisan stack:e2e-smoke --require-horizon --require-reverb
 make smoke-e2e
 ```
 
+Quality checks:
+
+```bash
+# formatting in check mode
+make lint
+
+# GraphQL schema validation
+make schema
+
+# local CI-equivalent run
+make ci
+```
+
 ## API Endpoints
 
 - GraphQL: `/graphql`
@@ -375,10 +413,12 @@ query {
 - async summary + embeddings pipeline is running via Redis/Horizon
 - GraphQL and Filament both use queued summary generation by default
 - prompt registry, compare, import/export flows are active
+- content bundle import/export and bundled demo dataset are available for local demos
 - domain events are published to Reverb and Redis Streams
 - Queue Center shows queue depth, pending age, throughput, and success/failure rates
 - System Health page verifies DB/pgvector, Redis, Horizon, Reverb, and Ollama
 - live smoke command validates queued summary, queued embeddings, and semantic search against the running stack
+- GitHub Actions CI runs Pint, tests, and GraphQL schema validation on pushes and pull requests
 
 ## License
 

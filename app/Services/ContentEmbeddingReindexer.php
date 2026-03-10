@@ -14,8 +14,7 @@ class ContentEmbeddingReindexer
     public function __construct(
         private readonly ContentEmbeddingDispatcher $dispatcher,
         private readonly ContentEmbeddingGenerator $generator,
-    ) {
-    }
+    ) {}
 
     public function isSupportedMode(string $mode): bool
     {

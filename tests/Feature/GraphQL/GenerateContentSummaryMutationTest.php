@@ -31,9 +31,9 @@ class GenerateContentSummaryMutationTest extends TestCase
         ]);
 
         $response = $this->postJson('/graphql', [
-            'query' => <<<GRAPHQL
-mutation GenerateSummary(\$contentId: ID!) {
-  generateContentSummary(content_id: \$contentId, prompt_version: "1.0.0") {
+            'query' => <<<'GRAPHQL'
+mutation GenerateSummary($contentId: ID!) {
+  generateContentSummary(content_id: $contentId, prompt_version: "1.0.0") {
     id
     content_id
     status

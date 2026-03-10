@@ -13,7 +13,5 @@ final readonly class AiGenerationResult
         public ?int $tokensIn = null,
         public ?int $tokensOut = null,
         public array $raw = [],
-    ) {
-    }
+    ) {}
 }
-

@@ -11,8 +11,7 @@ class GenerateContentSummaryMutation
 {
     public function __construct(
         private readonly ContentSummaryDispatcher $dispatcher,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{content_id: int|string, prompt_version?: string|null}  $args
@@ -22,7 +21,7 @@ class GenerateContentSummaryMutation
         $content = Content::query()->find($args['content_id']);
 
         if (! $content) {
-            throw (new ModelNotFoundException())->setModel(Content::class, [$args['content_id']]);
+            throw (new ModelNotFoundException)->setModel(Content::class, [$args['content_id']]);
         }
 
         $this->dispatcher->dispatch(

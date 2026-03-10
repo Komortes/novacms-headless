@@ -17,8 +17,7 @@ class OpenAiProvider implements AiProviderInterface
         private readonly ?string $apiKey,
         private readonly string $defaultModel,
         private readonly int $timeout,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $options

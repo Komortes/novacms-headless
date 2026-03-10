@@ -20,8 +20,7 @@ class ContentSummaryGenerator
         private readonly PromptRegistry $promptRegistry,
         private readonly ContentSummaryEventLogger $eventLogger,
         private readonly DomainEventPublisher $domainEventPublisher,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $options
@@ -32,8 +31,7 @@ class ContentSummaryGenerator
         ?string $promptVersion = null,
         array $options = [],
         array $runContext = [],
-    ): ContentAiSummary
-    {
+    ): ContentAiSummary {
         $summary = $content->summary()->firstOrCreate(
             ['content_id' => $content->id],
             ['status' => SummaryStatus::PENDING],
@@ -197,8 +195,7 @@ class ContentSummaryGenerator
         Prompt $reducePrompt,
         ?string $promptVersion,
         array $options,
-    ): array
-    {
+    ): array {
         $chunks = $this->splitIntoChunks((string) $content->body);
         if (count($chunks) < 2) {
             $fallbackPrompt = $this->promptRegistry->resolveActive('content.summary', $promptVersion);
@@ -296,6 +293,7 @@ class ContentSummaryGenerator
 
             if (Str::length($candidate) <= $chunkChars) {
                 $current = $candidate;
+
                 continue;
             }
 
@@ -306,6 +304,7 @@ class ContentSummaryGenerator
 
             if (Str::length($segment) <= $chunkChars) {
                 $current = $segment;
+
                 continue;
             }
 
@@ -352,7 +351,7 @@ class ContentSummaryGenerator
             ."Parameters:\n"
             .$this->renderPromptParameters($prompt)."\n\n"
             ."Content metadata:\n"
-            ."- type: ".($content->type->value ?? $content->type)."\n"
+            .'- type: '.($content->type->value ?? $content->type)."\n"
             ."- slug: {$content->slug}\n"
             ."- locale: {$content->locale}\n"
             ."- title: {$content->title}\n\n"
@@ -366,7 +365,7 @@ class ContentSummaryGenerator
             ."Parameters:\n"
             .$this->renderPromptParameters($prompt)."\n\n"
             ."Content metadata:\n"
-            ."- type: ".($content->type->value ?? $content->type)."\n"
+            .'- type: '.($content->type->value ?? $content->type)."\n"
             ."- slug: {$content->slug}\n"
             ."- locale: {$content->locale}\n"
             ."- title: {$content->title}\n"
@@ -389,7 +388,7 @@ class ContentSummaryGenerator
             ."Parameters:\n"
             .$this->renderPromptParameters($prompt)."\n\n"
             ."Content metadata:\n"
-            ."- type: ".($content->type->value ?? $content->type)."\n"
+            .'- type: '.($content->type->value ?? $content->type)."\n"
             ."- slug: {$content->slug}\n"
             ."- locale: {$content->locale}\n"
             ."- title: {$content->title}\n\n"
@@ -523,6 +522,7 @@ class ContentSummaryGenerator
                 if ($question !== '') {
                     $result[] = ['question' => $question, 'answer' => ''];
                 }
+
                 continue;
             }
 

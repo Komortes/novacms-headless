@@ -12,8 +12,7 @@ class SemanticSearchQuery
 {
     public function __construct(
         private readonly SemanticSearchService $service,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{
