@@ -154,8 +154,7 @@ class EmbeddingCommandsTest extends TestCase
              */
             public function __construct(
                 private readonly array $vector,
-            ) {
-            }
+            ) {}
 
             public function generate(string $prompt, array $options = []): AiGenerationResult
             {

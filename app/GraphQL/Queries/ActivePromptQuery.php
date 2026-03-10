@@ -8,8 +8,7 @@ class ActivePromptQuery
 {
     public function __construct(
         private readonly PromptRegistry $registry,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{name: string, version?: string|null}  $args
@@ -22,4 +21,3 @@ class ActivePromptQuery
         );
     }
 }
-

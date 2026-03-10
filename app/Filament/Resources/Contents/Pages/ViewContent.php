@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Contents\Pages;
 
-use App\Filament\Resources\Contents\ContentResource;
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
+use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
@@ -12,9 +12,9 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;

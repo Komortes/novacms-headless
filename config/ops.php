@@ -13,4 +13,3 @@ return [
         'socket_timeout_seconds' => (float) env('OPS_HEALTH_SOCKET_TIMEOUT_SECONDS', 2.0),
     ],
 ];
-

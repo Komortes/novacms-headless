@@ -6,7 +6,7 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "filament/filament": "^5.2",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.45",
@@ -48,6 +48,17 @@
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#f59e0b,#14b8a6,#fb7185,#60a5fa,#94a3b8\" \"php artisan serve\" \"php artisan horizon\" \"php artisan reverb:start\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=app,horizon,reverb,logs,vite --kill-others"
+        ],
+        "lint": [
+            "@php vendor/bin/pint --test"
+        ],
+        "schema:validate": [
+            "@php artisan lighthouse:validate-schema"
+        ],
+        "ci": [
+            "@composer lint",
+            "@php artisan test",
+            "@composer schema:validate"
         ],
         "test": [
             "@php artisan config:clear --ansi",

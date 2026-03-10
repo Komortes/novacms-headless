@@ -21,8 +21,7 @@ class RuntimeE2eSmokeService
         private readonly ContentEmbeddingDispatcher $embeddingDispatcher,
         private readonly QueueWorkerRunner $queueWorkerRunner,
         private readonly SemanticSearchService $semanticSearchService,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{

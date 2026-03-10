@@ -11,8 +11,7 @@ class CreateContentMutation
 {
     public function __construct(
         private readonly ContentMutationValidator $validator,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{

@@ -12,8 +12,7 @@ class UpdateContentMutation
 {
     public function __construct(
         private readonly ContentMutationValidator $validator,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{
@@ -31,7 +30,7 @@ class UpdateContentMutation
         $content = Content::query()->find((int) $args['id']);
 
         if (! $content) {
-            throw (new ModelNotFoundException())->setModel(Content::class, [$args['id']]);
+            throw (new ModelNotFoundException)->setModel(Content::class, [$args['id']]);
         }
 
         $validated = $this->validator->validateForUpdate($content, $args);

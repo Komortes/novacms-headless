@@ -5,6 +5,7 @@ use App\Enums\ContentType;
 use App\Models\ApiAccessToken;
 use App\Models\Content;
 use App\Models\User;
+use App\Services\ContentCatalogManager;
 use App\Services\ContentEmbeddingDispatcher;
 use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentEmbeddingReindexer;
@@ -14,6 +15,7 @@ use App\Services\RuntimeE2eSmokeService;
 use App\Services\RuntimeHealthService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
@@ -149,6 +151,78 @@ Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Pos
 
     return Command::SUCCESS;
 })->purpose('Create a sample content record for local AI summary testing');
+
+Artisan::command('content:export {--path=} {--type=} {--status=} {--locale=} {--no-summaries}', function (ContentCatalogManager $catalog): int {
+    $payload = $catalog->export(
+        type: is_string($this->option('type')) && trim((string) $this->option('type')) !== '' ? trim((string) $this->option('type')) : null,
+        status: is_string($this->option('status')) && trim((string) $this->option('status')) !== '' ? trim((string) $this->option('status')) : null,
+        locale: is_string($this->option('locale')) && trim((string) $this->option('locale')) !== '' ? trim((string) $this->option('locale')) : null,
+        withSummaries: ! (bool) $this->option('no-summaries'),
+    );
+
+    $json = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    if (! is_string($json)) {
+        $this->error('Failed to encode content export payload.');
+
+        return Command::FAILURE;
+    }
+
+    $path = is_string($this->option('path')) && trim((string) $this->option('path')) !== ''
+        ? trim((string) $this->option('path'))
+        : storage_path('app/exports/content-bundle-'.now()->format('Ymd-His').'.json');
+
+    File::ensureDirectoryExists(dirname($path));
+    File::put($path, $json);
+
+    $this->info('Content bundle exported.');
+    $this->line('Path: '.$path);
+    $this->line('Items: '.$payload['count']);
+    $this->line('Included summaries: '.((bool) $this->option('no-summaries') ? 'no' : 'yes'));
+
+    return Command::SUCCESS;
+})->purpose('Export content records to a reusable JSON bundle');
+
+Artisan::command('content:import {source? : Path to content bundle JSON} {--demo : Import the bundled demo dataset} {--no-upsert}', function (ContentCatalogManager $catalog): int {
+    $useDemo = (bool) $this->option('demo');
+    $source = $this->argument('source');
+
+    if (! $useDemo && (! is_string($source) || trim($source) === '')) {
+        $this->error('Provide a JSON file path or use --demo.');
+
+        return Command::FAILURE;
+    }
+
+    $path = $useDemo
+        ? database_path('seeders/data/demo-content.json')
+        : trim((string) $source);
+
+    if (! File::exists($path)) {
+        $this->error("Content bundle not found at [{$path}].");
+
+        return Command::FAILURE;
+    }
+
+    $payload = File::get($path);
+
+    try {
+        $result = $catalog->importFromJson($payload, ! (bool) $this->option('no-upsert'));
+    } catch (Throwable $exception) {
+        $this->error('Content import failed: '.$exception->getMessage());
+
+        return Command::FAILURE;
+    }
+
+    $this->info($useDemo ? 'Demo content imported.' : 'Content bundle imported.');
+    $this->line('Path: '.$path);
+    $this->line('Imported: '.$result['imported']);
+    $this->line('Created: '.$result['created']);
+    $this->line('Updated: '.$result['updated']);
+    $this->line('Summaries: '.$result['summaries']);
+    $this->line('Skipped: '.$result['skipped']);
+
+    return Command::SUCCESS;
+})->purpose('Import content records from JSON or load the bundled demo dataset');
 
 Artisan::command('api-token:create {user : User ID or email} {name : Token label} {--ability=* : Repeatable token abilities} {--expires-days=}', function () {
     $userArgument = trim((string) $this->argument('user'));

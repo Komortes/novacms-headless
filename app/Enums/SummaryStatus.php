@@ -9,4 +9,3 @@ enum SummaryStatus: string
     case READY = 'ready';
     case FAILED = 'failed';
 }
-

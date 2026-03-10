@@ -64,4 +64,3 @@ class StackSmokeCommandTest extends TestCase
             ->assertExitCode(1);
     }
 }
-

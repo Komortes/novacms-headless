@@ -5,15 +5,14 @@ namespace App\Services;
 use App\AI\AiProviderFactory;
 use App\Models\Content;
 use App\Models\ContentEmbedding;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class ContentEmbeddingGenerator
 {
     public function __construct(
         private readonly AiProviderFactory $providerFactory,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{chunks: int, deleted: int, provider: string, model: string, dimensions: int}
@@ -104,6 +103,7 @@ class ContentEmbeddingGenerator
             $candidate = $current === '' ? $segment : $current."\n\n".$segment;
             if (Str::length($candidate) <= $chunkChars) {
                 $current = $candidate;
+
                 continue;
             }
 

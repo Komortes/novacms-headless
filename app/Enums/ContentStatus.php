@@ -8,4 +8,3 @@ enum ContentStatus: string
     case PUBLISHED = 'published';
     case ARCHIVED = 'archived';
 }
-

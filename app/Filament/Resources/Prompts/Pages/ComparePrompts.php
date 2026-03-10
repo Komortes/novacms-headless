@@ -243,11 +243,13 @@ class ComparePrompts extends Page
 
             if ($leftHas && ! $rightHas) {
                 $removed[] = (string) $key;
+
                 continue;
             }
 
             if (! $leftHas && $rightHas) {
                 $added[] = (string) $key;
+
                 continue;
             }
 

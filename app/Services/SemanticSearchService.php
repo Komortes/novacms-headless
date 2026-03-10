@@ -15,8 +15,7 @@ class SemanticSearchService
 {
     public function __construct(
         private readonly AiProviderFactory $providerFactory,
-    ) {
-    }
+    ) {}
 
     /**
      * @return list<array{content: Content, score: float}>
@@ -28,8 +27,7 @@ class SemanticSearchService
         ?ContentStatus $status = null,
         ?ContentType $type = null,
         ?float $minScore = null,
-    ): array
-    {
+    ): array {
         $normalizedQuery = trim($query);
 
         if ($normalizedQuery === '') {
@@ -62,8 +60,7 @@ class SemanticSearchService
         ?ContentStatus $status = null,
         ?ContentType $type = null,
         ?float $minScore = null,
-    ): array
-    {
+    ): array {
         $centroid = $this->resolveContentCentroidVector($contentId);
 
         if ($centroid === []) {
@@ -93,8 +90,7 @@ class SemanticSearchService
         ?ContentType $type = null,
         ?float $minScore = null,
         ?int $excludeContentId = null,
-    ): array
-    {
+    ): array {
         $safeLimit = max(1, min(100, $limit));
         $scoreThreshold = $this->normalizeMinScore($minScore);
 
@@ -133,8 +129,7 @@ class SemanticSearchService
         ?ContentType $type,
         ?float $minScore,
         ?int $excludeContentId,
-    ): array
-    {
+    ): array {
         $vectorLiteral = $this->vectorToSqlLiteral($queryVector);
         $scoreExpression = 'MAX(1 - (content_embeddings.embedding <=> ?::vector))';
 
@@ -186,8 +181,7 @@ class SemanticSearchService
         ?ContentType $type,
         ?float $minScore,
         ?int $excludeContentId,
-    ): array
-    {
+    ): array {
         $rows = ContentEmbedding::query()
             ->with('content')
             ->when(
@@ -339,7 +333,6 @@ class SemanticSearchService
     }
 
     /**
-     * @param  mixed  $rawVector
      * @return list<float>
      */
     private function normalizeVector(mixed $rawVector): array

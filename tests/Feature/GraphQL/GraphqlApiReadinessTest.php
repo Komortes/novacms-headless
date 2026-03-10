@@ -25,9 +25,9 @@ class GraphqlApiReadinessTest extends TestCase
         ]);
 
         $response = $this->postJson('/graphql', [
-            'query' => <<<GRAPHQL
-query GetContent(\$id: ID!) {
-  content(id: \$id) {
+            'query' => <<<'GRAPHQL'
+query GetContent($id: ID!) {
+  content(id: $id) {
     id
     slug
     status
@@ -56,9 +56,9 @@ GRAPHQL,
         ]);
 
         $response = $this->postJson('/graphql', [
-            'query' => <<<GRAPHQL
-query GetContent(\$id: ID!) {
-  content(id: \$id) {
+            'query' => <<<'GRAPHQL'
+query GetContent($id: ID!) {
+  content(id: $id) {
     id
     slug
     status

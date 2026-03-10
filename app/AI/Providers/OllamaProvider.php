@@ -16,8 +16,7 @@ class OllamaProvider implements AiProviderInterface
         private readonly string $baseUrl,
         private readonly string $defaultModel,
         private readonly int $timeout,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $options

@@ -8,8 +8,8 @@ use App\Enums\SummaryStatus;
 use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class ContentLifecycleTest extends TestCase

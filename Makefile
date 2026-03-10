@@ -4,17 +4,21 @@ SHELL := /bin/sh
 OLLAMA_MODEL ?= qwen2.5:1.5b
 OLLAMA_EMBEDDING_MODEL ?= nomic-embed-text
 
-.PHONY: help env php-deps node-deps infra-up infra-down infra-ps key migrate seed-prompts models up dev smoke smoke-e2e test
+.PHONY: help env php-deps node-deps infra-up infra-down infra-ps key migrate seed-prompts demo-data models up dev smoke smoke-e2e lint schema ci test
 
 help:
 	@printf "%s\n" \
 	  "NovaCMS developer workflow" \
 	  "" \
 	  "make up          Prepare .env, install deps if missing, start Docker infra, generate key, migrate, seed prompts" \
+	  "make demo-data   Import the bundled demo content dataset" \
 	  "make dev         Run local app stack: serve + horizon + reverb + pail + vite" \
 	  "make models      Pull required Ollama models" \
 	  "make smoke       Run infrastructure smoke checks" \
 	  "make smoke-e2e   Run live end-to-end smoke scenario" \
+	  "make lint        Run Pint in check mode" \
+	  "make schema      Validate Lighthouse schema" \
+	  "make ci          Run lint + tests + schema validation" \
 	  "make infra-down  Stop Docker infrastructure" \
 	  "make infra-ps    Show Docker service status" \
 	  "make test        Run test suite"
@@ -46,6 +50,9 @@ migrate:
 seed-prompts:
 	@php artisan db:seed --class=PromptSeeder --force
 
+demo-data:
+	@php artisan db:seed --class=DemoContentSeeder --force
+
 models:
 	@docker compose exec ollama ollama pull $(OLLAMA_MODEL)
 	@docker compose exec ollama ollama pull $(OLLAMA_EMBEDDING_MODEL)
@@ -72,6 +79,14 @@ smoke: up
 
 smoke-e2e: up
 	@php artisan stack:e2e-smoke
+
+lint:
+	@vendor/bin/pint --test
+
+schema:
+	@php artisan lighthouse:validate-schema
+
+ci: lint test schema
 
 test:
 	@php artisan test

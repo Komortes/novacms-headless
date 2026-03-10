@@ -45,4 +45,3 @@ class AiProviderFactoryTest extends TestCase
         app(AiProviderFactory::class)->make();
     }
 }
-

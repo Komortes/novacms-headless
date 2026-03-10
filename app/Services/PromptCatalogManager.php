@@ -10,8 +10,7 @@ class PromptCatalogManager
 {
     public function __construct(
         private readonly PromptRegistry $promptRegistry,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{

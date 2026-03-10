@@ -61,4 +61,3 @@ class SystemHealth extends Page
         return app(RuntimeHealthService::class)->collect();
     }
 }
-

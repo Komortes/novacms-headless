@@ -1,0 +1,143 @@
+{
+  "contents": [
+    {
+      "type": "post",
+      "slug": "launching-editorial-automation",
+      "title": "Launching Editorial Automation in NovaCMS",
+      "body": "# Launching Editorial Automation\n\nNovaCMS centralizes editorial content and runs AI summarization in the background. Editors can create content as markdown, monitor queue state, and ship structured summaries without blocking the publishing flow.\n\n## Why it matters\n\nAsync processing keeps the authoring UI responsive. Prompt versioning and model tracking make generated output traceable. Semantic search adds retrieval on top of the same content graph.\n\n## Operational angle\n\nThe admin panel exposes queue status, health checks, and summary retries so the platform can be demonstrated locally without external infrastructure.",
+      "locale": "en",
+      "status": "published",
+      "summary": {
+        "status": "ready",
+        "summary_tldr": "NovaCMS lets editors publish markdown content while AI summaries run asynchronously and stay traceable through prompt and model metadata.",
+        "summary_bullets": [
+          "Editorial writes stay responsive because AI work moves to the queue.",
+          "Summaries retain provider, model, and prompt version metadata.",
+          "Semantic search builds on the same centralized content store."
+        ],
+        "summary_meta_description": "NovaCMS runs editorial AI workflows asynchronously, tracks prompt versions, and keeps publishing responsive.",
+        "summary_faq": [
+          {
+            "question": "Why is summarization asynchronous?",
+            "answer": "It keeps the editorial UI responsive and lets workers process AI tasks in the background."
+          },
+          {
+            "question": "What metadata is stored for AI runs?",
+            "answer": "The system keeps provider, model, prompt version, and token metrics for each generated summary."
+          }
+        ],
+        "summary_tags": [
+          "editorial",
+          "async-jobs",
+          "summaries"
+        ],
+        "model": "qwen2.5:1.5b",
+        "prompt_version": "1.0.0",
+        "tokens_in": 642,
+        "tokens_out": 184,
+        "generation_ms": 1280,
+        "last_error": null
+      }
+    },
+    {
+      "type": "post",
+      "slug": "semantic-search-for-content-teams",
+      "title": "Semantic Search for Content Teams",
+      "body": "# Semantic Search for Content Teams\n\nNovaCMS stores embeddings in PostgreSQL with pgvector. This allows search by meaning instead of strict keyword overlap.\n\n## What the query layer supports\n\nGraphQL clients can call `semanticSearch` and `relatedContent` with status, locale, and type filters. Editors can regenerate embeddings when provider settings change.\n\n## Why this matters\n\nSemantic search improves retrieval for knowledge-heavy content collections and supports recommendations for related reading.",
+      "locale": "en",
+      "status": "published",
+      "summary": {
+        "status": "ready",
+        "summary_tldr": "NovaCMS uses pgvector-backed embeddings so content teams can search by meaning and retrieve related material with filters.",
+        "summary_bullets": [
+          "Embeddings are stored in PostgreSQL with pgvector.",
+          "GraphQL search supports locale, type, status, and score filters.",
+          "Reindex flows help when models or providers change."
+        ],
+        "summary_meta_description": "NovaCMS adds pgvector-based semantic search with related content and filtered GraphQL queries.",
+        "summary_faq": [
+          {
+            "question": "Where are embeddings stored?",
+            "answer": "They are stored in PostgreSQL using pgvector."
+          },
+          {
+            "question": "Can search results be filtered?",
+            "answer": "Yes, semantic search supports filters for locale, status, type, and minimum score."
+          }
+        ],
+        "summary_tags": [
+          "semantic-search",
+          "pgvector",
+          "graphql"
+        ],
+        "model": "qwen2.5:1.5b",
+        "prompt_version": "1.0.0",
+        "tokens_in": 511,
+        "tokens_out": 163,
+        "generation_ms": 1135,
+        "last_error": null
+      }
+    },
+    {
+      "type": "page",
+      "slug": "editorial-operations-guide",
+      "title": "Editorial Operations Guide",
+      "body": "# Editorial Operations Guide\n\nUse the Content list to review status, AI state, and last update time. Open a record to inspect generated TL;DR, bullets, meta description, FAQ, and tags.\n\n## Recommended flow\n\nCreate or edit content, wait for background summarization, review the generated output, and publish only when the quality gate passes.\n\n## Monitoring\n\nQueue Center highlights pending, generating, and failed runs. System Health surfaces infrastructure checks for database, Redis, Reverb, Horizon, and Ollama.",
+      "locale": "en",
+      "status": "published",
+      "summary": {
+        "status": "ready",
+        "summary_tldr": "The admin panel guides editors from content creation to AI review, with queue visibility and infrastructure health checks built in.",
+        "summary_bullets": [
+          "Content records expose AI-generated TL;DR, bullets, FAQ, and tags.",
+          "Publishing is gated by summary quality requirements.",
+          "Queue Center and System Health provide operational visibility."
+        ],
+        "summary_meta_description": "NovaCMS gives editors a guided workflow with AI review, queue monitoring, and infrastructure health checks.",
+        "summary_faq": [
+          {
+            "question": "What blocks publishing?",
+            "answer": "Publishing is blocked until the AI summary is ready and passes the quality gate."
+          },
+          {
+            "question": "Where do editors monitor failures?",
+            "answer": "Queue Center shows failed runs and offers direct retry actions."
+          }
+        ],
+        "summary_tags": [
+          "operations",
+          "filament",
+          "workflow"
+        ],
+        "model": "qwen2.5:1.5b",
+        "prompt_version": "1.0.0",
+        "tokens_in": 557,
+        "tokens_out": 171,
+        "generation_ms": 1204,
+        "last_error": null
+      }
+    },
+    {
+      "type": "post",
+      "slug": "roadmap-preview-q2",
+      "title": "Roadmap Preview Q2",
+      "body": "# Roadmap Preview Q2\n\nThis draft outlines the next wave of NovaCMS improvements: richer editorial analytics, deeper queue observability, and more granular AI provider policies.\n\nThe content is intentionally left in a pre-publish state so the admin UI can demonstrate retries and draft handling.",
+      "locale": "en",
+      "status": "draft",
+      "summary": {
+        "status": "failed",
+        "summary_tldr": null,
+        "summary_bullets": null,
+        "summary_meta_description": null,
+        "summary_faq": null,
+        "summary_tags": null,
+        "model": "qwen2.5:1.5b",
+        "prompt_version": "1.0.0",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "generation_ms": null,
+        "last_error": "Demo dataset: retry this item from Queue Center after the local model is available."
+      }
+    }
+  ]
+}
