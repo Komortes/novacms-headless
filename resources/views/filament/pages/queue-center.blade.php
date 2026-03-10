@@ -186,7 +186,21 @@
         </section>
 
         <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent Failed Runs</h3>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Recent Failed Runs</h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Inspect the last error and retry directly from here when the provider or queue issue is fixed.</p>
+                </div>
+                @if (count($failedItems) > 0)
+                    <x-filament::button
+                        size="sm"
+                        color="danger"
+                        wire:click="retryAllFailed"
+                    >
+                        Retry all failed
+                    </x-filament::button>
+                @endif
+            </div>
 
             @if (count($failedItems) === 0)
                 <div class="mt-4 rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
@@ -202,14 +216,23 @@
                             <div class="mt-3 space-y-2 text-sm">
                                 <p class="text-gray-700 dark:text-gray-200"><strong>Model:</strong> {{ $item['model'] }} · <strong>Latency:</strong> {{ $item['latency'] }}</p>
                                 <p class="rounded bg-rose-50 p-2 text-rose-900 dark:bg-rose-900/20 dark:text-rose-100">{{ $item['last_error'] !== '' ? $item['last_error'] : 'No error message captured.' }}</p>
-                                <x-filament::button
-                                    size="xs"
-                                    color="gray"
-                                    tag="a"
-                                    :href="\App\Filament\Resources\Contents\ContentResource::getUrl('view', ['record' => $item['id']])"
-                                >
-                                    Open Content
-                                </x-filament::button>
+                                <div class="flex flex-wrap gap-2">
+                                    <x-filament::button
+                                        size="xs"
+                                        color="danger"
+                                        wire:click="retryFailed({{ $item['id'] }})"
+                                    >
+                                        Retry
+                                    </x-filament::button>
+                                    <x-filament::button
+                                        size="xs"
+                                        color="gray"
+                                        tag="a"
+                                        :href="\App\Filament\Resources\Contents\ContentResource::getUrl('view', ['record' => $item['id']])"
+                                    >
+                                        Open Content
+                                    </x-filament::button>
+                                </div>
                             </div>
                         </details>
                     @endforeach

@@ -6,6 +6,7 @@ use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
 use App\Models\ContentAiSummaryEvent;
+use App\Services\ContentBulkOperations;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\RuntimeHealthService;
 use BackedEnum;
@@ -36,7 +37,7 @@ class QueueCenter extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Monitor summary queue and cancel queued runs before processing.';
+        return 'Monitor summary queue, retry failed runs, and cancel queued work before processing.';
     }
 
     protected function getHeaderActions(): array
@@ -47,6 +48,15 @@ class QueueCenter extends Page
                 ->icon(Heroicon::ArrowPath)
                 ->color('gray')
                 ->action(fn (): null => null),
+            Action::make('retryAllFailed')
+                ->label('Retry failed')
+                ->icon(Heroicon::ArrowPathRoundedSquare)
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Retry failed runs')
+                ->modalDescription('Queue all failed summary runs again using their last provider/model context when available.')
+                ->action(fn () => $this->retryAllFailed())
+                ->disabled(fn (): bool => ! ContentAiSummary::query()->where('status', SummaryStatus::FAILED->value)->exists()),
             Action::make('systemHealth')
                 ->label('System Health')
                 ->icon(Heroicon::Signal)
@@ -86,6 +96,65 @@ class QueueCenter extends Page
         Notification::make()
             ->title('Queued generation cancelled')
             ->body('Pending run for content #'.$content->id.' has been cancelled.')
+            ->success()
+            ->send();
+    }
+
+    public function retryFailed(int $contentId): void
+    {
+        $content = Content::query()
+            ->with('summary')
+            ->find($contentId);
+
+        if (! $content) {
+            return;
+        }
+
+        $result = app(ContentBulkOperations::class)->retryFailedSummaries([$content]);
+
+        if ($result['retried'] === 0) {
+            Notification::make()
+                ->title('Retry skipped')
+                ->body('This record is no longer in failed state.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title('Retry queued')
+            ->body('Failed generation for content #'.$content->id.' was queued again.')
+            ->success()
+            ->send();
+    }
+
+    public function retryAllFailed(): void
+    {
+        $failedContents = Content::query()
+            ->with('summary')
+            ->whereHas('summary', fn ($query) => $query->where('status', SummaryStatus::FAILED->value))
+            ->get();
+
+        $result = app(ContentBulkOperations::class)->retryFailedSummaries($failedContents);
+
+        if ($result['retried'] === 0) {
+            Notification::make()
+                ->title('No failed runs to retry')
+                ->body('There are no failed summary runs waiting for retry.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title('Failed runs queued')
+            ->body(sprintf(
+                'Queued %d failed run(s). Skipped %d record(s) that were no longer failed.',
+                $result['retried'],
+                $result['skipped'],
+            ))
             ->success()
             ->send();
     }

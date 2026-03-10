@@ -8,8 +8,9 @@ use App\Enums\SummaryStatus;
 use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
-use App\Services\ContentSummaryDispatcher;
+use App\Services\ContentBulkOperations;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -192,8 +193,8 @@ class ContentsTable
                             $selectedModel = trim((string) ($data['model'] ?? ''));
                             $model = $selectedModel;
 
-                            app(ContentSummaryDispatcher::class)->dispatch(
-                                content: $record,
+                            app(ContentBulkOperations::class)->queueSummaries(
+                                [$record],
                                 provider: $provider,
                                 model: $model !== '' ? $model : null,
                             );
@@ -219,6 +220,150 @@ class ContentsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('queueSummaries')
+                        ->label('Generate summaries')
+                        ->icon(Heroicon::ArrowPath)
+                        ->color('info')
+                        ->modalHeading('Generate summaries')
+                        ->modalDescription('Queue summary generation for the selected records. Records already generating are skipped.')
+                        ->modalSubmitActionLabel('Queue selected')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->schema([
+                            Select::make('provider')
+                                ->label('Provider')
+                                ->options(app(AiSettingsManager::class)->providerOptions())
+                                ->default(fn (): string => (string) config('ai.provider', 'ollama'))
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                                    $profile = (string) ($get('generation_profile') ?: 'balanced');
+                                    $model = app(AiSettingsManager::class)->modelForProfile((string) $state, $profile);
+
+                                    if ($model !== null) {
+                                        $set('model', $model);
+                                    }
+                                })
+                                ->native(false),
+                            Select::make('generation_profile')
+                                ->label('Preset')
+                                ->options(app(AiSettingsManager::class)->profileOptions())
+                                ->default('balanced')
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                                    $model = app(AiSettingsManager::class)->modelForProfile($provider, is_string($state) ? $state : null);
+
+                                    if ($model !== null) {
+                                        $set('model', $model);
+                                    }
+                                })
+                                ->native(false),
+                            Select::make('model')
+                                ->label('Model')
+                                ->options(function (Get $get): array {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+
+                                    return app(AiSettingsManager::class)->modelOptions($provider);
+                                })
+                                ->default(function (Get $get): ?string {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                                    $profile = (string) ($get('generation_profile') ?: 'balanced');
+
+                                    return app(AiSettingsManager::class)->modelForProfile($provider, $profile);
+                                })
+                                ->searchable()
+                                ->native(false)
+                                ->helperText('Preset auto-fills model.'),
+                        ])
+                        ->action(function (array $data, \Illuminate\Database\Eloquent\Collection $records): void {
+                            try {
+                                $result = app(ContentBulkOperations::class)->queueSummaries(
+                                    $records,
+                                    provider: (string) ($data['provider'] ?? config('ai.provider', 'ollama')),
+                                    model: filled($data['model'] ?? null) ? (string) $data['model'] : null,
+                                );
+                            } catch (Throwable $exception) {
+                                Notification::make()
+                                    ->title('Failed to queue selected summaries')
+                                    ->body(Str::limit($exception->getMessage(), 200))
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title('Summary generation queued')
+                                ->body(sprintf(
+                                    'Queued %d record(s). Skipped %d already generating record(s).',
+                                    $result['queued'],
+                                    $result['skipped'],
+                                ))
+                                ->success()
+                                ->send();
+                        }),
+                    BulkAction::make('reindexEmbeddings')
+                        ->label('Reindex embeddings')
+                        ->icon(Heroicon::CpuChip)
+                        ->color('gray')
+                        ->modalHeading('Reindex embeddings')
+                        ->modalDescription('Queue embedding regeneration for the selected records using the configured embeddings provider and model.')
+                        ->modalSubmitActionLabel('Queue selected')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                            $result = app(ContentBulkOperations::class)->queueEmbeddings($records);
+
+                            Notification::make()
+                                ->title('Embeddings queued')
+                                ->body(sprintf('Queued embedding reindex for %d record(s).', $result['queued']))
+                                ->success()
+                                ->send();
+                        }),
+                    BulkAction::make('changeStatus')
+                        ->label('Change status')
+                        ->icon(Heroicon::AdjustmentsHorizontal)
+                        ->color('warning')
+                        ->modalHeading('Change status')
+                        ->modalDescription('Apply one content status to all selected records. Publish will still respect the quality gate.')
+                        ->modalSubmitActionLabel('Update selected')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->schema([
+                            Select::make('status')
+                                ->label('Status')
+                                ->options([
+                                    ContentStatus::DRAFT->value => 'Draft',
+                                    ContentStatus::PUBLISHED->value => 'Published',
+                                    ContentStatus::ARCHIVED->value => 'Archived',
+                                ])
+                                ->required()
+                                ->native(false),
+                        ])
+                        ->action(function (array $data, \Illuminate\Database\Eloquent\Collection $records): void {
+                            $result = app(ContentBulkOperations::class)->updateStatuses(
+                                $records,
+                                (string) $data['status'],
+                            );
+
+                            $body = sprintf(
+                                'Updated %d record(s). Skipped %d unchanged record(s).',
+                                $result['updated'],
+                                $result['skipped'],
+                            );
+
+                            if ($result['failed'] > 0) {
+                                $body .= ' Failed: '.$result['failed'].'. '.Str::limit(implode(' | ', $result['errors']), 220);
+                            }
+
+                            Notification::make()
+                                ->title($result['failed'] > 0 ? 'Status update completed with warnings' : 'Status updated')
+                                ->body($body)
+                                ->{$result['failed'] > 0 ? 'warning' : 'success'}()
+                                ->send();
+                        }),
                     DeleteBulkAction::make(),
                 ]),
             ])
