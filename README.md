@@ -205,14 +205,26 @@ DOMAIN_EVENTS_STREAM_MAXLEN=10000
 ## Run Locally
 
 ```bash
+# one-time setup for dependencies + infra + key + migrations + prompts
+make up
+
+# pull local Ollama models if they are not available yet
+make models
+
+# start app server, horizon, reverb, logs, and vite
+make dev
+```
+
+Underlying manual steps:
+
+```bash
 cp .env.example .env
 composer install
 npm install
-
 docker compose up -d
 php artisan key:generate
 php artisan migrate
-
+php artisan db:seed --class=PromptSeeder --force
 php artisan serve
 php artisan horizon
 php artisan reverb:start
@@ -285,6 +297,9 @@ php artisan stack:smoke
 
 # machine-readable JSON (CI friendly)
 php artisan stack:smoke --json
+
+# via Makefile wrapper
+make smoke
 ```
 
 Live end-to-end smoke:
@@ -298,6 +313,9 @@ php artisan stack:e2e-smoke --keep-records
 
 # require full local runtime, including Horizon and Reverb
 php artisan stack:e2e-smoke --require-horizon --require-reverb
+
+# via Makefile wrapper
+make smoke-e2e
 ```
 
 ## API Endpoints
