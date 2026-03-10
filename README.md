@@ -42,7 +42,7 @@ Realtime status in admin/API consumers
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Backend | Laravel 12, PHP 8.2+ | Core domain, jobs, events, API integration |
+| Backend | Laravel 12, PHP 8.4+ | Core domain, jobs, events, API integration |
 | Database | PostgreSQL 16 | Relational content storage |
 | Vector Search | pgvector | Embeddings storage and similarity queries |
 | Queue/Cache | Redis + Predis | Async jobs and cache backend |
