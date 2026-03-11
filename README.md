@@ -1,5 +1,10 @@
 # NovaCMS
 
+[![CI](https://img.shields.io/github/actions/workflow/status/Komortes/novacms-headless/ci.yml?branch=main&label=CI)](https://github.com/Komortes/novacms-headless/actions/workflows/ci.yml)
+[![PHP](https://img.shields.io/badge/PHP-8.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
+[![License](https://img.shields.io/badge/License-MIT-0f766e.svg)](https://opensource.org/licenses/MIT)
+
 NovaCMS is an AI-powered headless CMS built on Laravel.  
 It stores and serves structured content through APIs and processes AI tasks asynchronously in the background.
 
@@ -13,6 +18,29 @@ It stores and serves structured content through APIs and processes AI tasks asyn
 - semantic search with vector embeddings
 - versioned prompt management for controlled AI outputs
 - runtime smoke checks and health dashboard for ops visibility
+
+## Development Workflow
+
+Use the local stack when you want the full runtime, including queue workers, Reverb, Redis, PostgreSQL, and Ollama.
+
+```bash
+# prepare local environment and infrastructure
+make up
+
+# import demo content for a usable admin walkthrough
+make demo-data
+
+# pull required local models
+make models
+
+# run app, horizon, reverb, logs, and vite
+make dev
+
+# run formatting, tests, and GraphQL schema validation
+make ci
+```
+
+If you only need a quick backend quality gate, `make lint`, `make test`, and `make schema` can be run independently.
 
 ## System Architecture
 
