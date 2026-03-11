@@ -18,6 +18,7 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -34,7 +35,7 @@ class ContentsTable
             ->poll('15s')
             ->striped()
             ->defaultSort('updated_at', 'desc')
-            ->searchPlaceholder('Search by title or slug')
+            ->searchPlaceholder('Search title, slug, or locale')
             ->defaultPaginationPageOption(10)
             ->paginated([10, 25, 50])
             ->recordUrl(fn (Content $record): string => ContentResource::getUrl('view', ['record' => $record]))
@@ -43,11 +44,20 @@ class ContentsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('title')
+                    ->label('Content')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight(FontWeight::SemiBold)
+                    ->description(fn (Content $record): string => $record->slug.' · '.$record->locale)
+                    ->wrap(),
                 TextColumn::make('slug')
                     ->searchable()
-                    ->copyable(),
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('locale')
+                    ->badge()
+                    ->color('gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type')
                     ->badge()
                     ->formatStateUsing(fn (mixed $state): string => $state->value ?? (string) $state)
@@ -57,6 +67,7 @@ class ContentsTable
                         default => 'gray',
                     }),
                 TextColumn::make('status')
+                    ->label('Editorial')
                     ->badge()
                     ->formatStateUsing(fn (mixed $state): string => $state->value ?? (string) $state)
                     ->color(fn (mixed $state): string => match ($state->value ?? (string) $state) {
@@ -69,6 +80,19 @@ class ContentsTable
                     ->label('AI')
                     ->state(fn (Content $record): string => $record->summary?->status?->value ?? SummaryStatus::PENDING->value)
                     ->badge()
+                    ->description(function (Content $record): string {
+                        $parts = [];
+
+                        if (filled($record->summary?->model)) {
+                            $parts[] = (string) $record->summary?->model;
+                        }
+
+                        if (is_numeric($record->summary?->generation_ms)) {
+                            $parts[] = (int) $record->summary?->generation_ms.' ms';
+                        }
+
+                        return $parts !== [] ? implode(' · ', $parts) : 'No completed run yet';
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         SummaryStatus::READY->value => 'success',
                         SummaryStatus::GENERATING->value => 'info',
@@ -78,9 +102,10 @@ class ContentsTable
                     }),
                 TextColumn::make('summary.summary_tldr')
                     ->label('TL;DR')
-                    ->limit(70)
+                    ->limit(110)
+                    ->wrap()
                     ->placeholder('Not generated yet')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 TextColumn::make('summary.generation_ms')
                     ->label('Latency')
                     ->formatStateUsing(fn (mixed $state): string => is_numeric($state) ? ((int) $state).' ms' : 'n/a')
@@ -88,6 +113,11 @@ class ContentsTable
                 TextColumn::make('updated_at')
                     ->label('Updated')
                     ->since()
+                    ->description(function (Content $record): string {
+                        return $record->summary?->updated_at?->diffForHumans()
+                            ? 'AI '.$record->summary->updated_at->diffForHumans()
+                            : 'AI not generated';
+                    })
                     ->sortable(),
             ])
             ->filters([

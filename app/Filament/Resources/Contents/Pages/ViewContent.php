@@ -27,6 +27,8 @@ class ViewContent extends ViewRecord
 {
     protected static string $resource = ContentResource::class;
 
+    protected string $view = 'filament.resources.contents.pages.view-content';
+
     public function getSubheading(): string|Htmlable|null
     {
         return 'Review generated AI output and run regeneration when content changes.';
@@ -176,6 +178,54 @@ class ViewContent extends ViewRecord
     public function getMaxContentWidth(): Width|string|null
     {
         return Width::Full;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getViewData(): array
+    {
+        /** @var Content $record */
+        $record = $this->getRecord()->loadMissing(['summary', 'latestSummaryEvent']);
+        $summary = $record->summary;
+        $bodyText = trim(strip_tags((string) Str::markdown((string) $record->body)));
+        $wordCount = count(array_filter(preg_split('/\s+/u', $bodyText) ?: []));
+        $bulletCount = count($summary?->summary_bullets ?? []);
+        $faqCount = count($summary?->summary_faq ?? []);
+        $tagCount = count($summary?->summary_tags ?? []);
+        $summaryStatus = $summary?->status?->value ?? SummaryStatus::PENDING->value;
+        $publicationStatus = $record->status->value;
+        $latestEvent = $record->latestSummaryEvent;
+        $qualityGatePassed = $summaryStatus === SummaryStatus::READY->value
+            && filled($summary?->summary_tldr)
+            && $bulletCount > 0
+            && $tagCount > 0
+            && $faqCount > 0;
+
+        $nextStep = match ($summaryStatus) {
+            SummaryStatus::FAILED->value => 'Inspect the last error, verify provider health, then queue a fresh run.',
+            SummaryStatus::GENERATING->value => 'Wait for the worker to finish. Avoid queueing duplicates while the run is active.',
+            SummaryStatus::PENDING->value => 'The record is waiting for worker pickup. Use Queue Center only if it stalls.',
+            SummaryStatus::READY->value => $qualityGatePassed
+                ? 'Review the generated sections and publish when the editorial check is satisfied.'
+                : 'Summary is ready, but the publish gate is still incomplete. Review FAQ, bullets, and tags.',
+            default => 'Review current state and decide whether regeneration is required.',
+        };
+
+        return [
+            'record' => $record,
+            'summaryStatus' => $summaryStatus,
+            'publicationStatus' => $publicationStatus,
+            'wordCount' => $wordCount,
+            'bulletCount' => $bulletCount,
+            'faqCount' => $faqCount,
+            'tagCount' => $tagCount,
+            'qualityGatePassed' => $qualityGatePassed,
+            'nextStep' => $nextStep,
+            'latestEventName' => $latestEvent?->event ? Str::headline((string) $latestEvent->event) : 'No events yet',
+            'latestEventWhen' => $latestEvent?->created_at?->diffForHumans() ?? 'n/a',
+            'latestEventMessage' => $latestEvent?->message ?: 'No additional event details captured.',
+        ];
     }
 
     #[On('novacms-domain-event')]
