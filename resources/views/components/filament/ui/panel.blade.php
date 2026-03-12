@@ -9,15 +9,42 @@
 
 @php
     $tones = [
-        'default' => 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900',
-        'rose' => 'border-rose-200 bg-white dark:border-rose-800/40 dark:bg-gray-900',
-        'amber' => 'border-amber-200 bg-white dark:border-amber-800/40 dark:bg-gray-900',
-        'sky' => 'border-sky-200 bg-white dark:border-sky-800/40 dark:bg-gray-900',
-        'emerald' => 'border-emerald-200 bg-white dark:border-emerald-800/40 dark:bg-gray-900',
+        'default' => [
+            'section' => 'border-gray-200 bg-white/95 dark:border-gray-800 dark:bg-gray-900/95',
+            'badge' => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+            'accent' => 'from-gray-200 via-gray-300 to-transparent dark:from-gray-700 dark:via-gray-600',
+        ],
+        'rose' => [
+            'section' => 'border-rose-200 bg-gradient-to-br from-white to-rose-50/80 dark:border-rose-800/40 dark:from-gray-900 dark:to-rose-950/10',
+            'badge' => 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200',
+            'accent' => 'from-rose-300 via-rose-400 to-transparent dark:from-rose-700 dark:via-rose-500',
+        ],
+        'amber' => [
+            'section' => 'border-amber-200 bg-gradient-to-br from-white to-amber-50/80 dark:border-amber-800/40 dark:from-gray-900 dark:to-amber-950/10',
+            'badge' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200',
+            'accent' => 'from-amber-300 via-amber-400 to-transparent dark:from-amber-700 dark:via-amber-500',
+        ],
+        'sky' => [
+            'section' => 'border-sky-200 bg-gradient-to-br from-white to-sky-50/80 dark:border-sky-800/40 dark:from-gray-900 dark:to-sky-950/10',
+            'badge' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200',
+            'accent' => 'from-sky-300 via-sky-400 to-transparent dark:from-sky-700 dark:via-sky-500',
+        ],
+        'emerald' => [
+            'section' => 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50/80 dark:border-emerald-800/40 dark:from-gray-900 dark:to-emerald-950/10',
+            'badge' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200',
+            'accent' => 'from-emerald-300 via-emerald-400 to-transparent dark:from-emerald-700 dark:via-emerald-500',
+        ],
     ];
+
+    $toneClasses = $tones[$tone] ?? $tones['default'];
 @endphp
 
-<section {{ $attributes->class(['rounded-2xl border shadow-sm', $tones[$tone] ?? $tones['default'], $padding]) }}>
+<section {{ $attributes->class(['relative overflow-hidden rounded-[1.5rem] border shadow-sm transition-shadow duration-200', $toneClasses['section'], $padding]) }}>
+    <div @class([
+        'absolute inset-x-0 top-0 h-px bg-gradient-to-r',
+        $toneClasses['accent'],
+    ])></div>
+
     @if (filled($eyebrow) || filled($title) || filled($description) || filled($badge) || isset($headerActions))
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -37,7 +64,10 @@
             @if (filled($badge) || isset($headerActions))
                 <div class="flex flex-wrap items-center gap-2">
                     @if (filled($badge))
-                        <div class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        <div @class([
+                            'rounded-full px-3 py-1 text-xs font-medium',
+                            $toneClasses['badge'],
+                        ])>
                             {{ $badge }}
                         </div>
                     @endif

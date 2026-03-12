@@ -19,12 +19,12 @@ class ContentForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
-            ->columns(2)
+            ->columns(3)
             ->components([
                 Section::make('Content source')
-                    ->description('Edit source markdown. Saving updates content hash and marks AI summary as pending.')
-                    ->columnSpan(1)
-                    ->columns(2)
+                    ->description('Write the canonical markdown source. Saving recalculates the content hash and marks AI output as stale when the body changes.')
+                    ->columnSpan(2)
+                    ->columns(6)
                     ->schema([
                         Select::make('type')
                             ->options([
@@ -32,7 +32,9 @@ class ContentForm
                                 ContentType::PAGE->value => 'Page',
                             ])
                             ->default(ContentType::POST->value)
-                            ->required(),
+                            ->required()
+                            ->native(false)
+                            ->columnSpan(2),
                         Select::make('status')
                             ->options([
                                 ContentStatus::DRAFT->value => 'Draft',
@@ -40,7 +42,15 @@ class ContentForm
                                 ContentStatus::ARCHIVED->value => 'Archived',
                             ])
                             ->default(ContentStatus::DRAFT->value)
-                            ->required(),
+                            ->required()
+                            ->native(false)
+                            ->columnSpan(2),
+                        TextInput::make('locale')
+                            ->required()
+                            ->default('en')
+                            ->maxLength(10)
+                            ->helperText('Used together with slug for uniqueness.')
+                            ->columnSpan(2),
                         TextInput::make('title')
                             ->required()
                             ->maxLength(255)
@@ -52,19 +62,21 @@ class ContentForm
                                 modifyRuleUsing: fn (Unique $rule, Get $get): Unique => $rule
                                     ->where('locale', (string) ($get('locale') ?: 'en')),
                             )
-                            ->helperText('Unique per locale.')
-                            ->maxLength(255),
-                        TextInput::make('locale')
-                            ->required()
-                            ->default('en')
-                            ->maxLength(10),
+                            ->helperText('Public identifier, unique per locale.')
+                            ->maxLength(255)
+                            ->columnSpan(3),
+                        Placeholder::make('slug_hint')
+                            ->label('Routing note')
+                            ->content('Use a stable slug. Changing it later can invalidate frontend links and search references.')
+                            ->columnSpan(3),
                         MarkdownEditor::make('body')
                             ->required()
-                            ->helperText('Main source for summary generation.')
-                            ->columnSpanFull(),
+                            ->helperText('Primary input for summary generation, FAQ extraction, tags, and embeddings.')
+                            ->columnSpanFull()
+                            ->maxLength(100000),
                     ]),
                 Section::make('AI pipeline')
-                    ->description('Status and metadata used by async summary generation.')
+                    ->description('Operational metadata for the current record. Use this rail to verify readiness before leaving the form.')
                     ->columnSpan(1)
                     ->schema([
                         Placeholder::make('summary_status')
@@ -81,8 +93,12 @@ class ContentForm
                             ->content(fn (?Content $record): string => $record?->content_hash ?? 'Will be generated on save')
                             ->columnSpanFull(),
                         Placeholder::make('summary_hint')
-                            ->label('Workflow')
-                            ->content('After saving content, use "Generate summary" from table/view pages.')
+                            ->label('Expected flow')
+                            ->content('Save first, then queue generation from the header action or from the content list when the draft is stable.')
+                            ->columnSpanFull(),
+                        Placeholder::make('publish_hint')
+                            ->label('Publishing note')
+                            ->content('Published content should have a ready summary with usable TL;DR, tags, bullets, and at least one FAQ pair.')
                             ->columnSpanFull(),
                     ]),
             ]);

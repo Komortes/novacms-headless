@@ -38,4 +38,31 @@
             </span>
         </div>
     </x-filament.ui.hero>
+
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <x-filament.ui.metric-card
+            label="Total Records"
+            :value="$totalContent"
+            description="All posts and pages available in the workspace."
+            tone="indigo"
+        />
+        <x-filament.ui.metric-card
+            label="Drafts"
+            :value="$draftCount"
+            description="Editorial items still in preparation."
+            tone="amber"
+        />
+        <x-filament.ui.metric-card
+            label="Published"
+            :value="$publishedCount"
+            description="Content already available for delivery."
+            tone="emerald"
+        />
+        <x-filament.ui.metric-card
+            label="AI Attention"
+            :value="$pendingAiCount + $failedAiCount"
+            description="Queued, generating, or failed runs that still need operator attention."
+            tone="rose"
+        />
+    </section>
 </div>

@@ -14,7 +14,9 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Throwable;
@@ -22,6 +24,18 @@ use Throwable;
 class EditContent extends EditRecord
 {
     protected static string $resource = ContentResource::class;
+
+    protected string $view = 'filament.resources.contents.pages.edit-content';
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        return 'Update content source, keep the AI pipeline healthy, and use regeneration only when the editorial intent changed.';
+    }
+
+    public function getMaxContentWidth(): Width|string|null
+    {
+        return Width::Full;
+    }
 
     protected function getHeaderActions(): array
     {
@@ -134,5 +148,24 @@ class EditContent extends EditRecord
     public function refreshFromDomainEvent(): void
     {
         $this->record = $this->getRecord()->refresh();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getViewData(): array
+    {
+        /** @var Content $record */
+        $record = $this->getRecord()->loadMissing('summary');
+        $summary = $record->summary;
+
+        return [
+            'record' => $record,
+            'summaryStatus' => $summary?->status?->value ?? SummaryStatus::PENDING->value,
+            'hasReadySummary' => $summary?->status === SummaryStatus::READY,
+            'bulletCount' => count($summary?->summary_bullets ?? []),
+            'faqCount' => count($summary?->summary_faq ?? []),
+            'tagCount' => count($summary?->summary_tags ?? []),
+        ];
     }
 }

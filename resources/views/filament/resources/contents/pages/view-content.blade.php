@@ -83,7 +83,7 @@
                 {{ $this->infolist }}
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-6 xl:sticky xl:top-6 xl:self-start">
                 <x-filament.ui.panel
                     eyebrow="Quality Gate"
                     title="Publishing Readiness"
