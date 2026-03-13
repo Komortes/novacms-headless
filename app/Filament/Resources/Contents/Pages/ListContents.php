@@ -10,6 +10,7 @@ use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentCatalogManager;
 use App\Services\ContentEmbeddingReindexer;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
@@ -87,6 +88,8 @@ class ListContents extends ListRecords
                 ->label('Export bundle')
                 ->icon(Heroicon::ArrowDownTray)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canManageContentCatalog())
+                ->visible(fn (): bool => AdminPanelAccess::canManageContentCatalog())
                 ->modalHeading('Export content bundle')
                 ->modalSubmitActionLabel('Export')
                 ->schema([
@@ -137,6 +140,8 @@ class ListContents extends ListRecords
                 ->label('Import bundle')
                 ->icon(Heroicon::ArrowUpTray)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canManageContentCatalog())
+                ->visible(fn (): bool => AdminPanelAccess::canManageContentCatalog())
                 ->modalHeading('Import content bundle')
                 ->modalSubmitActionLabel('Import')
                 ->modalWidth('5xl')
@@ -177,6 +182,8 @@ class ListContents extends ListRecords
                 ->label('Load demo data')
                 ->icon(Heroicon::Sparkles)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canManageContentCatalog())
+                ->visible(fn (): bool => AdminPanelAccess::canManageContentCatalog())
                 ->requiresConfirmation()
                 ->modalDescription('Imports the bundled demo dataset into the current database.')
                 ->action(function (): void {
@@ -204,6 +211,8 @@ class ListContents extends ListRecords
                 ->label('Reindex embeddings')
                 ->icon(Heroicon::CpuChip)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canManageEmbeddings())
+                ->visible(fn (): bool => AdminPanelAccess::canManageEmbeddings())
                 ->modalHeading('Queue embedding reindex')
                 ->modalSubmitActionLabel('Queue reindex')
                 ->schema([
@@ -268,11 +277,13 @@ class ListContents extends ListRecords
                 ->label('Queue')
                 ->icon(Heroicon::Clock)
                 ->url(\App\Filament\Pages\QueueCenter::getUrl())
+                ->visible(fn (): bool => AdminPanelAccess::canAccessQueueOperations())
                 ->color('gray'),
             Action::make('apiAccess')
                 ->label('API access')
                 ->icon(Heroicon::Key)
                 ->url(\App\Filament\Pages\ApiAccess::getUrl())
+                ->visible(fn (): bool => AdminPanelAccess::canManageApiAccess())
                 ->color('gray'),
             Action::make('faqInfo')
                 ->label('FAQ & info')
@@ -283,6 +294,7 @@ class ListContents extends ListRecords
                 ->label('AI settings')
                 ->icon(Heroicon::Cog6Tooth)
                 ->url(\App\Filament\Pages\AiSettings::getUrl())
+                ->visible(fn (): bool => AdminPanelAccess::canManageAiSettings())
                 ->color('gray'),
             CreateAction::make(),
         ];

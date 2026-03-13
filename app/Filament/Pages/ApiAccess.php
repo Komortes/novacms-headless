@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\ApiAccessToken;
 use App\Models\User;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
@@ -37,6 +38,16 @@ class ApiAccess extends Page
     protected static ?string $slug = 'settings/api-access';
 
     protected string $view = 'filament.pages.api-access';
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canManageApiAccess();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public function getSubheading(): string|Htmlable|null
     {

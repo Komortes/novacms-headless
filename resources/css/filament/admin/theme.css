@@ -58,6 +58,97 @@
         box-shadow: var(--nova-admin-surface-shadow);
     }
 
+    .fi-sidebar {
+        @apply border-r border-white/10 bg-slate-950/88 backdrop-blur-2xl;
+        box-shadow: 24px 0 54px -34px rgba(2, 6, 23, 0.75);
+    }
+
+    .fi-sidebar-header-ctn,
+    .fi-sidebar-footer {
+        @apply border-white/10;
+    }
+
+    .fi-sidebar-header,
+    .fi-topbar {
+        @apply border-white/10;
+    }
+
+    .fi-sidebar-nav {
+        @apply px-3 pb-5;
+    }
+
+    .fi-sidebar-nav-groups,
+    .fi-sidebar-group-items,
+    .fi-sidebar-sub-group-items {
+        @apply space-y-1.5;
+    }
+
+    .fi-sidebar-group-btn {
+        @apply rounded-[1rem] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200;
+    }
+
+    .fi-sidebar-group-label,
+    .fi-sidebar-item-label {
+        @apply tracking-tight;
+    }
+
+    .fi-sidebar-item-btn {
+        @apply rounded-[1rem] px-3 py-3 text-slate-300 transition duration-150;
+    }
+
+    .fi-sidebar-item-icon {
+        @apply text-slate-500 transition duration-150;
+    }
+
+    .fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:hover {
+        @apply bg-white/[0.06] text-white;
+    }
+
+    .fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
+        @apply text-slate-200;
+    }
+
+    .fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+    .fi-sidebar-item.fi-sidebar-item-has-active-child-items > .fi-sidebar-item-btn {
+        @apply bg-white/[0.09] text-white ring-1 ring-white/10;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
+    .fi-sidebar-item.fi-sidebar-item-has-active-child-items .fi-sidebar-item-icon {
+        @apply text-sky-200;
+    }
+
+    .fi-user-menu-trigger {
+        @apply flex w-full items-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-3 py-3 text-left text-slate-200 transition hover:bg-white/[0.08];
+    }
+
+    .fi-user-menu-trigger-text {
+        @apply text-sm font-medium;
+    }
+
+    .fi-topbar-ctn {
+        @apply sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8;
+    }
+
+    .fi-topbar {
+        @apply rounded-[1.25rem] border bg-white/74 px-4 py-3 backdrop-blur-xl dark:bg-slate-950/70;
+        border-color: var(--nova-admin-border-light);
+        box-shadow: var(--nova-admin-soft-shadow);
+    }
+
+    .dark .fi-topbar {
+        border-color: var(--nova-admin-border-dark);
+    }
+
+    .fi-topbar-item-btn {
+        @apply rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white;
+    }
+
+    .fi-topbar-item.fi-active .fi-topbar-item-btn {
+        @apply bg-slate-950 text-white dark:bg-white dark:text-slate-950;
+    }
+
     .fi-header-heading {
         @apply text-[clamp(1.7rem,1.25rem+1vw,2.45rem)] font-semibold tracking-tight text-slate-950 dark:text-slate-50;
     }
@@ -254,5 +345,9 @@
 
     .nova-code-block code {
         @apply font-mono;
+    }
+
+    .nova-link-tile {
+        @apply block rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 dark:border-slate-800/70 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
     }
 }

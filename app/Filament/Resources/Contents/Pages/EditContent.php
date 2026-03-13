@@ -7,6 +7,7 @@ use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
@@ -44,6 +45,7 @@ class EditContent extends EditRecord
                 ->label('Queue')
                 ->icon(Heroicon::Clock)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canAccessQueueOperations())
                 ->url(\App\Filament\Pages\QueueCenter::getUrl()),
             Action::make('faqInfo')
                 ->label('FAQ & info')
@@ -54,11 +56,14 @@ class EditContent extends EditRecord
                 ->label('AI settings')
                 ->icon(Heroicon::Cog6Tooth)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canManageAiSettings())
                 ->url(\App\Filament\Pages\AiSettings::getUrl()),
             Action::make('generateSummary')
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)
                 ->color('info')
+                ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
                 ->modalHeading('Generate summary')
                 ->modalSubmitActionLabel('Queue generation')
                 ->schema([

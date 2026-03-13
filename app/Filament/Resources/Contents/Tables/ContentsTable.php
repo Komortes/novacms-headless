@@ -9,6 +9,7 @@ use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -166,6 +167,8 @@ class ContentsTable
                     ->label('Generate summary')
                     ->icon(Heroicon::ArrowPath)
                     ->color('info')
+                    ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                    ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
                     ->modalHeading('Generate summary')
                     ->modalSubmitActionLabel('Queue generation')
                     ->schema([
@@ -249,7 +252,8 @@ class ContentsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => AdminPanelAccess::canDeleteContent()),
                 ]),
             ])
             ->emptyStateIcon(Heroicon::DocumentText)

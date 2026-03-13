@@ -8,6 +8,7 @@ use App\Models\ContentAiSummary;
 use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\RuntimeHealthService;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -33,6 +34,16 @@ class QueueCenter extends Page
     protected static ?string $slug = 'queue-center';
 
     protected string $view = 'filament.pages.queue-center';
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canAccessQueueOperations();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public function getSubheading(): string|Htmlable|null
     {

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Services\AiSettingsManager;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
@@ -43,6 +44,16 @@ class AiSettings extends Page
     protected static ?string $slug = 'settings/ai';
 
     protected string $view = 'filament.pages.ai-settings';
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canManageAiSettings();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public function getSubheading(): string|Htmlable|null
     {

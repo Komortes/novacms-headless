@@ -8,6 +8,7 @@ use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -41,6 +42,7 @@ class ViewContent extends ViewRecord
                 ->label('Queue')
                 ->icon(Heroicon::Clock)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canAccessQueueOperations())
                 ->url(\App\Filament\Pages\QueueCenter::getUrl()),
             Action::make('faqInfo')
                 ->label('FAQ & info')
@@ -51,6 +53,8 @@ class ViewContent extends ViewRecord
                 ->label('Set status')
                 ->icon(Heroicon::AdjustmentsHorizontal)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canChangeContentStatus())
+                ->visible(fn (): bool => AdminPanelAccess::canChangeContentStatus())
                 ->schema([
                     Select::make('status')
                         ->label('Status')
@@ -90,6 +94,8 @@ class ViewContent extends ViewRecord
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)
                 ->color('info')
+                ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
                 ->modalHeading('Generate summary')
                 ->modalSubmitActionLabel('Queue generation')
                 ->schema([

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Services\RuntimeHealthService;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -24,6 +25,16 @@ class SystemHealth extends Page
     protected static ?string $slug = 'system-health';
 
     protected string $view = 'filament.pages.system-health';
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canAccessQueueOperations();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public function getSubheading(): string|Htmlable|null
     {

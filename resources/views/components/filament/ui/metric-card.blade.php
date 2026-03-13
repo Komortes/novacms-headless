@@ -36,7 +36,8 @@
     $toneClass = $tones[$tone] ?? $tones['gray'];
 @endphp
 
-<article {{ $attributes->class(['relative overflow-hidden rounded-[1.5rem] border bg-white p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 dark:bg-gray-900', $toneClass['section']]) }}>
+<article {{ $attributes->class(['relative overflow-hidden rounded-[1.5rem] border bg-white p-5 shadow-sm ring-1 ring-white/50 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.25)] dark:bg-gray-900 dark:ring-white/5', $toneClass['section']]) }}>
+    <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-white/0 via-white/70 to-white/0 opacity-70 dark:via-white/10"></div>
     <div @class([
         'absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl',
         $toneClass['soft'],
