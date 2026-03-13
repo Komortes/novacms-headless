@@ -17,7 +17,7 @@ class PromptForm
             ->columns(3)
             ->components([
                 Section::make('Prompt Definition')
-                    ->description('Define the versioned prompt contract used by async AI pipelines. Keep instructions explicit and output shape stable.')
+                    ->description('Versioned prompt contract for the async AI pipeline. Keep instructions explicit and output shape stable.')
                     ->columnSpan(2)
                     ->columns(6)
                     ->schema([
@@ -30,10 +30,10 @@ class PromptForm
                             ->required()
                             ->maxLength(32)
                             ->columnSpan(3)
-                            ->helperText('Semver format recommended (1.0.0).'),
+                            ->helperText('Semver is recommended, for example `1.0.0`.'),
                         Toggle::make('is_active')
                             ->label('Active version')
-                            ->helperText('Only one active version is allowed per prompt name.')
+                            ->helperText('Only one active version is allowed for each prompt name.')
                             ->default(true)
                             ->inline(false)
                             ->columnSpan(2),
@@ -41,16 +41,16 @@ class PromptForm
                             ->label('Change intent')
                             ->dehydrated(false)
                             ->placeholder('Example: tighter FAQ rules, shorter TL;DR, more explicit JSON contract')
-                            ->helperText('Not saved. This is a working note for the editor while preparing the prompt.')
+                            ->helperText('Not saved. Use it as a temporary release note while editing.')
                             ->columnSpan(4),
                         Textarea::make('template')
                             ->required()
                             ->rows(24)
                             ->columnSpanFull()
-                            ->helperText('Use plain text instructions. JSON output rules should be explicit.'),
+                            ->helperText('Use plain text instructions and make structured output rules explicit.'),
                     ]),
                 Section::make('Parameters')
-                    ->description('Structured values passed into prompt rendering. Keep keys stable so prompt versions are easy to compare.')
+                    ->description('Structured values passed into prompt rendering. Stable keys make versions easier to compare.')
                     ->columnSpan(1)
                     ->schema([
                         KeyValue::make('parameters')
@@ -59,7 +59,7 @@ class PromptForm
                             ->valueLabel('Value')
                             ->columnSpanFull()
                             ->default([])
-                            ->helperText('Examples: chunk_size, output_language, max_bullets'),
+                            ->helperText('Examples: `chunk_size`, `output_language`, `max_bullets`.'),
                     ]),
             ]);
     }

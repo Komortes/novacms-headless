@@ -22,7 +22,7 @@ class ContentForm
             ->columns(3)
             ->components([
                 Section::make('Content source')
-                    ->description('Write the canonical markdown source. Saving recalculates the content hash and marks AI output as stale when the body changes.')
+                    ->description('Canonical markdown source. Saving refreshes the content hash and marks stale AI output for regeneration.')
                     ->columnSpan(2)
                     ->columns(6)
                     ->schema([
@@ -67,38 +67,34 @@ class ContentForm
                             ->columnSpan(3),
                         Placeholder::make('slug_hint')
                             ->label('Routing note')
-                            ->content('Use a stable slug. Changing it later can invalidate frontend links and search references.')
+                            ->content('Use a stable slug. Late changes create friction for frontend routes and search references.')
                             ->columnSpan(3),
                         MarkdownEditor::make('body')
                             ->required()
-                            ->helperText('Primary input for summary generation, FAQ extraction, tags, and embeddings.')
+                            ->helperText('Primary source for summary generation, FAQ extraction, tags, and embeddings.')
                             ->columnSpanFull()
                             ->maxLength(100000),
                     ]),
                 Section::make('AI pipeline')
-                    ->description('Operational metadata for the current record. Use this rail to verify readiness before leaving the form.')
+                    ->description('Current AI state and quick review signals for this record.')
                     ->columnSpan(1)
                     ->schema([
                         Placeholder::make('summary_status')
-                            ->label('Current summary status')
+                            ->label('Summary')
                             ->content(fn (?Content $record): string => $record?->summary?->status?->value ?? 'pending'),
                         Placeholder::make('summary_model')
-                            ->label('Last model')
+                            ->label('Model')
                             ->content(fn (?Content $record): string => $record?->summary?->model ?? 'n/a'),
                         Placeholder::make('summary_prompt_version')
-                            ->label('Last prompt version')
+                            ->label('Prompt')
                             ->content(fn (?Content $record): string => $record?->summary?->prompt_version ?? 'n/a'),
                         Placeholder::make('content_hash')
                             ->label('Content hash')
                             ->content(fn (?Content $record): string => $record?->content_hash ?? 'Will be generated on save')
                             ->columnSpanFull(),
-                        Placeholder::make('summary_hint')
-                            ->label('Expected flow')
-                            ->content('Save first, then queue generation from the header action or from the content list when the draft is stable.')
-                            ->columnSpanFull(),
                         Placeholder::make('publish_hint')
-                            ->label('Publishing note')
-                            ->content('Published content should have a ready summary with usable TL;DR, tags, bullets, and at least one FAQ pair.')
+                            ->label('Review gate')
+                            ->content('Publish only after the summary is ready and the TL;DR, bullets, tags, and FAQ are worth keeping.')
                             ->columnSpanFull(),
                     ]),
             ]);

@@ -3,3 +3,256 @@
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../resources/views/filament/**/*.blade.php';
 @source '../../../../resources/views/components/filament/**/*.blade.php';
+
+:root {
+    --nova-admin-bg: radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 24%), linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    --nova-admin-surface-shadow: 0 24px 60px -36px rgba(15, 23, 42, 0.26);
+    --nova-admin-soft-shadow: 0 18px 44px -32px rgba(15, 23, 42, 0.18);
+    --nova-admin-border-light: rgba(255, 255, 255, 0.72);
+    --nova-admin-border-dark: rgba(255, 255, 255, 0.08);
+}
+
+.dark {
+    --nova-admin-bg: radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 20%), linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+@layer components {
+    .fi-layout,
+    .fi-main {
+        background: var(--nova-admin-bg);
+    }
+
+    .fi-main-ctn {
+        @apply px-4 pb-10 pt-4 sm:px-6 lg:px-8;
+    }
+
+    .fi-page,
+    .fi-page-header-main-ctn,
+    .fi-page-main,
+    .fi-page-content {
+        @apply gap-6 space-y-6;
+    }
+
+    .fi-header,
+    .fi-page-sub-navigation-tabs,
+    .fi-ta-ctn,
+    .fi-section,
+    .fi-wi-widget,
+    .fi-modal-window {
+        @apply border bg-white/78 backdrop-blur-xl dark:bg-slate-950/60;
+        border-color: var(--nova-admin-border-light);
+        box-shadow: var(--nova-admin-soft-shadow);
+    }
+
+    .dark .fi-header,
+    .dark .fi-page-sub-navigation-tabs,
+    .dark .fi-ta-ctn,
+    .dark .fi-section,
+    .dark .fi-wi-widget,
+    .dark .fi-modal-window {
+        border-color: var(--nova-admin-border-dark);
+    }
+
+    .fi-header {
+        @apply rounded-[1.75rem] px-6 py-6;
+        box-shadow: var(--nova-admin-surface-shadow);
+    }
+
+    .fi-header-heading {
+        @apply text-[clamp(1.7rem,1.25rem+1vw,2.45rem)] font-semibold tracking-tight text-slate-950 dark:text-slate-50;
+    }
+
+    .fi-header-subheading {
+        @apply mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+    }
+
+    .fi-header-actions-ctn {
+        @apply items-start gap-2.5;
+    }
+
+    .fi-breadcrumbs {
+        @apply mb-3;
+    }
+
+    .fi-breadcrumbs-item-label {
+        @apply text-xs font-medium text-slate-500 dark:text-slate-400;
+    }
+
+    .fi-page-sub-navigation-tabs {
+        @apply rounded-[1.35rem] p-1.5;
+    }
+
+    .fi-tabs {
+        @apply gap-1;
+    }
+
+    .fi-tabs-item {
+        @apply rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition duration-150 dark:text-slate-300;
+    }
+
+    .fi-tabs-item:hover {
+        @apply bg-slate-100/80 text-slate-950 dark:bg-white/5 dark:text-white;
+    }
+
+    .fi-tabs-item.fi-active {
+        @apply bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950;
+    }
+
+    .fi-section {
+        @apply overflow-hidden rounded-[1.6rem];
+    }
+
+    .fi-section-header {
+        @apply gap-4 border-b border-slate-200/70 px-6 py-5 dark:border-white/10;
+    }
+
+    .fi-section-header-heading {
+        @apply text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100;
+    }
+
+    .fi-section-header-description {
+        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+    }
+
+    .fi-section-content {
+        @apply px-6 py-6;
+    }
+
+    .fi-sc-section .fi-section-content {
+        @apply space-y-6;
+    }
+
+    .fi-section-footer {
+        @apply border-t border-slate-200/70 px-6 py-4 dark:border-white/10;
+    }
+
+    .fi-fo-field {
+        @apply gap-2;
+    }
+
+    .fi-fo-field-label {
+        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+    }
+
+    .fi-fo-field-label-content {
+        @apply leading-none;
+    }
+
+    .fi-fo-field-content-col {
+        @apply space-y-2;
+    }
+
+    .fi-fo-field-wrp-error-list,
+    .fi-fo-field-wrp-error-message {
+        @apply text-sm;
+    }
+
+    .fi-input-wrp,
+    .fi-fo-markdown-editor,
+    .fi-fo-rich-editor,
+    .fi-fo-code-editor,
+    .fi-fo-key-value,
+    .fi-fo-builder {
+        @apply rounded-[1rem] border border-slate-200 bg-white/90 shadow-sm transition duration-200 dark:border-slate-700 dark:bg-slate-950/70;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    }
+
+    .fi-input-wrp:focus-within,
+    .fi-fo-markdown-editor:focus-within,
+    .fi-fo-rich-editor:focus-within,
+    .fi-fo-code-editor:focus-within,
+    .fi-fo-key-value:focus-within,
+    .fi-fo-builder:focus-within {
+        @apply border-sky-300 ring-4 ring-sky-100 dark:border-sky-500 dark:ring-sky-500/15;
+    }
+
+    .fi-input,
+    .fi-select-input {
+        @apply min-h-12 px-4 text-sm text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+    }
+
+    .fi-input-wrp-label {
+        @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500;
+    }
+
+    .fi-fo-textarea textarea {
+        @apply min-h-40 px-4 py-3 text-sm leading-7 text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+    }
+
+    .fi-fo-markdown-editor > div,
+    .fi-fo-rich-editor-main,
+    .fi-fo-code-editor > div {
+        @apply min-h-[24rem];
+    }
+
+    .fi-fo-checkbox-list-option {
+        @apply rounded-[1rem] border border-slate-200/70 bg-white/75 px-4 py-3 shadow-sm transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-slate-800 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
+    }
+
+    .fi-fo-checkbox-list-option-description {
+        @apply mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400;
+    }
+
+    .fi-in-entry {
+        @apply gap-3 rounded-[1.2rem] border border-slate-200/70 bg-slate-50/75 px-4 py-4 dark:border-slate-800/70 dark:bg-slate-900/60;
+    }
+
+    .fi-in-entry-label {
+        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+    }
+
+    .fi-in-entry-content {
+        @apply text-sm leading-7 text-slate-800 dark:text-slate-100;
+    }
+
+    .fi-in-repeatable-item {
+        @apply rounded-[1.2rem] border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800/70 dark:bg-slate-950/55;
+    }
+
+    .fi-ta-header {
+        @apply px-6 pt-6;
+    }
+
+    .fi-ta-header-heading {
+        @apply text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100;
+    }
+
+    .fi-ta-header-description {
+        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+    }
+
+    .fi-ta-header-toolbar,
+    .fi-ta-content-header {
+        @apply border-t border-slate-200/70 px-6 py-4 dark:border-white/10;
+    }
+
+    .fi-ta-row {
+        @apply transition-colors hover:bg-slate-50/80 dark:hover:bg-white/[0.02];
+    }
+
+    .fi-ta-cell,
+    .fi-ta-header-cell {
+        @apply align-top;
+    }
+
+    .fi-ta-cell-label {
+        @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500;
+    }
+
+    .fi-wi-stats-overview-stat {
+        @apply rounded-[1.5rem] border border-white/70 bg-white/78 p-5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60;
+        box-shadow: var(--nova-admin-soft-shadow);
+    }
+
+    .nova-select {
+        @apply block w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-sky-300 focus:outline-none focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-500/15;
+    }
+
+    .nova-code-block {
+        @apply max-h-[560px] overflow-auto rounded-[1.25rem] border border-white/10 bg-slate-950/95 p-4 text-xs leading-6 text-slate-100 shadow-inner;
+    }
+
+    .nova-code-block code {
+        @apply font-mono;
+    }
+}

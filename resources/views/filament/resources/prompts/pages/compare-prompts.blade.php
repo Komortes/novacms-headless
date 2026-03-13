@@ -28,7 +28,7 @@
             <div class="grid gap-3 lg:grid-cols-3">
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Prompt name</label>
-                    <select wire:model.live="promptName" class="mt-1 block w-full rounded-xl border-gray-300 bg-white text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                    <select wire:model.live="promptName" class="nova-select mt-1">
                         @foreach ($promptNames as $name)
                             <option value="{{ $name }}">{{ $name }}</option>
                         @endforeach
@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Left version</label>
-                    <select wire:model.live="leftVersion" class="mt-1 block w-full rounded-xl border-gray-300 bg-white text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                    <select wire:model.live="leftVersion" class="nova-select mt-1">
                         @foreach ($versionOptions as $version)
                             <option value="{{ $version }}">{{ $version }}</option>
                         @endforeach
@@ -44,7 +44,7 @@
                 </div>
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Right version</label>
-                    <select wire:model.live="rightVersion" class="mt-1 block w-full rounded-xl border-gray-300 bg-white text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                    <select wire:model.live="rightVersion" class="nova-select mt-1">
                         @foreach ($versionOptions as $version)
                             <option value="{{ $version }}">{{ $version }}</option>
                         @endforeach
@@ -89,7 +89,7 @@
                     :tone="$leftPrompt['is_active'] ? 'emerald' : 'default'"
                 >
                     <p class="text-xs text-gray-500 dark:text-gray-400">Updated {{ $leftPrompt['updated_at'] ?: 'n/a' }}</p>
-                    <pre class="mt-4 max-h-[520px] overflow-auto rounded-2xl bg-gray-950 p-4 text-xs text-gray-100">{{ $leftPrompt['template'] }}</pre>
+                    <pre class="nova-code-block mt-4"><code>{{ $leftPrompt['template'] }}</code></pre>
                 </x-filament.ui.panel>
 
                 <x-filament.ui.panel
@@ -99,7 +99,7 @@
                     :tone="$rightPrompt['is_active'] ? 'emerald' : 'sky'"
                 >
                     <p class="text-xs text-gray-500 dark:text-gray-400">Updated {{ $rightPrompt['updated_at'] ?: 'n/a' }}</p>
-                    <pre class="mt-4 max-h-[520px] overflow-auto rounded-2xl bg-gray-950 p-4 text-xs text-gray-100">{{ $rightPrompt['template'] }}</pre>
+                    <pre class="nova-code-block mt-4"><code>{{ $rightPrompt['template'] }}</code></pre>
                 </x-filament.ui.panel>
             </section>
 
@@ -150,7 +150,7 @@
                         eyebrow="Template Diff"
                         title="Additions Preview"
                     >
-                        <ul class="space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+                        <ul class="space-y-1.5 text-sm text-emerald-800 dark:text-emerald-200">
                             @forelse ($templateDiff['added_preview'] as $line)
                                 <li>+ {{ $line }}</li>
                             @empty
@@ -164,7 +164,7 @@
                         eyebrow="Template Diff"
                         title="Removals Preview"
                     >
-                        <ul class="space-y-1 text-sm text-rose-800 dark:text-rose-200">
+                        <ul class="space-y-1.5 text-sm text-rose-800 dark:text-rose-200">
                             @forelse ($templateDiff['removed_preview'] as $line)
                                 <li>- {{ $line }}</li>
                             @empty
@@ -174,6 +174,25 @@
                     </x-filament.ui.panel>
                 </div>
             </section>
+        @else
+            <x-filament.ui.panel
+                tone="amber"
+                eyebrow="Compare State"
+                title="Choose Prompt Versions"
+                description="Select a prompt name and two versions to render the template and parameter diff."
+            >
+                <div class="grid gap-3 md:grid-cols-3">
+                    <div class="rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:bg-amber-900/15 dark:text-amber-100">
+                        Pick a prompt name first.
+                    </div>
+                    <div class="rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        Use the newest version on one side and the currently active version on the other.
+                    </div>
+                    <div class="rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        Review both template and parameter shifts before activation.
+                    </div>
+                </div>
+            </x-filament.ui.panel>
         @endif
     </div>
 </x-filament-panels::page>
