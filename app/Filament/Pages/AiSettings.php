@@ -17,6 +17,7 @@ use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -41,6 +42,8 @@ class AiSettings extends Page
 
     protected static ?string $slug = 'settings/ai';
 
+    protected string $view = 'filament.pages.ai-settings';
+
     public function getSubheading(): string|Htmlable|null
     {
         return 'Configure provider defaults and API credentials used by AI summary generation.';
@@ -56,31 +59,38 @@ class AiSettings extends Page
         return $schema->statePath('data');
     }
 
+    public function getMaxContentWidth(): Width|string|null
+    {
+        return Width::Full;
+    }
+
     public function form(Schema $schema): Schema
     {
         $settingsManager = app(AiSettingsManager::class);
 
         return $schema
-            ->columns(2)
+            ->columns(3)
             ->components([
                 Section::make('Generation defaults')
-                    ->description('Used when no provider/model is explicitly selected in generation actions.')
+                    ->description('Applied when no provider or model is explicitly selected from a generation action.')
                     ->columnSpan(1)
                     ->schema([
                         Select::make('default_provider')
                             ->label('Default provider')
                             ->options($settingsManager->providerOptions())
                             ->required()
-                            ->native(false),
+                            ->native(false)
+                            ->helperText('Editors can still override provider/model per run.'),
                     ]),
                 Section::make('Ollama (local)')
-                    ->description('Recommended for zero-cost local runs.')
+                    ->description('Recommended for local development and low-cost demo runs.')
                     ->columnSpan(1)
                     ->schema([
                         TextInput::make('ollama_base_url')
                             ->label('Base URL')
                             ->url()
-                            ->placeholder('http://127.0.0.1:11434'),
+                            ->placeholder('http://127.0.0.1:11434')
+                            ->helperText('Usually the local Ollama HTTP endpoint.'),
                         Select::make('ollama_model')
                             ->label('Default model')
                             ->options($settingsManager->modelOptions('ollama'))
@@ -126,11 +136,11 @@ class AiSettings extends Page
                     ]),
                 Section::make('Notes')
                     ->compact()
-                    ->columnSpan(1)
+                    ->columnSpanFull()
                     ->schema([
                         Placeholder::make('usage_notes')
                             ->hiddenLabel()
-                            ->content('Values saved here override .env defaults at runtime. Use Generate summary actions in Content pages to choose provider/model per request.'),
+                            ->content('Values saved here override .env defaults at runtime. Use Generate summary actions in Content pages to choose provider and model per request, while this page defines the stable operating baseline.'),
                     ]),
             ]);
     }
@@ -188,5 +198,21 @@ class AiSettings extends Page
             'openai_api_key' => null,
             'clear_openai_api_key' => false,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getViewData(): array
+    {
+        $settingsManager = app(AiSettingsManager::class);
+        $providers = $settingsManager->providerOptions();
+
+        return [
+            'providerCount' => count($providers),
+            'ollamaModelCount' => count($settingsManager->modelOptions('ollama')),
+            'openAiModelCount' => count($settingsManager->modelOptions('openai')),
+            'storedOpenAiKey' => $this->hasStoredOpenAiKey,
+        ];
     }
 }

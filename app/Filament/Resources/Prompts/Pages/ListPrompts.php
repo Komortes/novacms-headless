@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Prompts\Pages;
 
 use App\Filament\Resources\Prompts\PromptResource;
+use App\Filament\Widgets\PromptWorkspaceWidget;
 use App\Services\PromptCatalogManager;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -110,5 +111,17 @@ class ListPrompts extends ListRecords
                 }),
             CreateAction::make(),
         ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PromptWorkspaceWidget::class,
+        ];
+    }
+
+    public function getHeaderWidgetsColumns(): int|array
+    {
+        return 1;
     }
 }

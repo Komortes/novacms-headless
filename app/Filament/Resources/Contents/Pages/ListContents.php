@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Contents\Pages;
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Filament\Resources\Contents\ContentResource;
+use App\Filament\Widgets\ContentWorkspaceWidget;
 use App\Models\Content;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -87,6 +88,18 @@ class ListContents extends ListRecords
                 ->color('gray'),
             CreateAction::make(),
         ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            ContentWorkspaceWidget::class,
+        ];
+    }
+
+    public function getHeaderWidgetsColumns(): int|array
+    {
+        return 1;
     }
 
     #[On('novacms-domain-event')]
