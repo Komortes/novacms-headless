@@ -19,11 +19,11 @@ class ContentForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
-            ->columns(3)
+            ->columns(4)
             ->components([
                 Section::make('Content source')
                     ->description('Canonical markdown source. Saving refreshes the content hash and marks stale AI output for regeneration.')
-                    ->columnSpan(2)
+                    ->columnSpan(3)
                     ->columns(6)
                     ->schema([
                         Select::make('type')
@@ -71,12 +71,13 @@ class ContentForm
                             ->columnSpan(3),
                         MarkdownEditor::make('body')
                             ->required()
-                            ->helperText('Primary source for summary generation, FAQ extraction, tags, and embeddings.')
+                            ->placeholder("# Start with the canonical draft\n\nUse headings, short sections, and explicit structure.")
+                            ->helperText('Canonical source for summary generation, FAQ extraction, tags, and embeddings.')
                             ->columnSpanFull()
                             ->maxLength(100000),
                     ]),
                 Section::make('AI pipeline')
-                    ->description('Current AI state and quick review signals for this record.')
+                    ->description('Current AI state, source identity, and quick review signals for this record.')
                     ->columnSpan(1)
                     ->schema([
                         Placeholder::make('summary_status')
@@ -88,6 +89,23 @@ class ContentForm
                         Placeholder::make('summary_prompt_version')
                             ->label('Prompt')
                             ->content(fn (?Content $record): string => $record?->summary?->prompt_version ?? 'n/a'),
+                        Placeholder::make('summary_shape')
+                            ->label('Structured output')
+                            ->content(function (?Content $record): string {
+                                $summary = $record?->summary;
+
+                                return sprintf(
+                                    '%d bullets · %d FAQ pairs · %d tags',
+                                    count($summary?->summary_bullets ?? []),
+                                    count($summary?->summary_faq ?? []),
+                                    count($summary?->summary_tags ?? []),
+                                );
+                            }),
+                        Placeholder::make('summary_runtime')
+                            ->label('Latest runtime')
+                            ->content(fn (?Content $record): string => is_numeric($record?->summary?->generation_ms)
+                                ? ((int) $record->summary->generation_ms).' ms · in '.($record->summary->tokens_in ?? 'n/a').' / out '.($record->summary->tokens_out ?? 'n/a')
+                                : 'n/a'),
                         Placeholder::make('content_hash')
                             ->label('Content hash')
                             ->content(fn (?Content $record): string => $record?->content_hash ?? 'Will be generated on save')

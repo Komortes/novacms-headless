@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Prompts\Pages;
 
 use App\Filament\Resources\Prompts\PromptResource;
+use App\Models\Prompt;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\Support\Htmlable;
@@ -34,6 +35,17 @@ class CreatePrompt extends CreateRecord
                 'Version changes should be intentional and comparable.',
                 'Only activate when the new contract is safe for existing jobs.',
             ],
+            'registryFamilies' => Prompt::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['name', 'version', 'updated_at'])
+                ->map(fn (Prompt $prompt): array => [
+                    'name' => (string) $prompt->name,
+                    'version' => (string) $prompt->version,
+                    'updated_at' => $prompt->updated_at?->diffForHumans() ?? 'n/a',
+                ])
+                ->take(6)
+                ->all(),
         ];
     }
 }
