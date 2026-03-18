@@ -3,114 +3,176 @@
         <x-filament.ui.hero
             tone="sky"
             eyebrow="Provider Control"
-            title="AI Settings"
-            description="Define the runtime defaults for local and external providers. Editors can override model and provider per generation run, but this page sets the operational baseline."
+            title="AI Runtime Baseline"
+            description="Define the provider, model, and timeout defaults that shape content generation. This page should describe the runtime you actually expect editors and operators to trust."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operating Model</p>
                 <div class="mt-4 space-y-3 text-sm text-slate-200">
                     <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                         <p class="font-semibold text-white">Local first</p>
-                        <p class="mt-1 text-slate-300">Use Ollama as the stable default when you want zero-cost local generation.</p>
+                        <p class="mt-1 text-slate-300">Keep Ollama stable for drafts, previews, and low-cost editorial loops.</p>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                        <p class="font-semibold text-white">External fallback</p>
-                        <p class="mt-1 text-slate-300">Keep OpenAI-compatible access ready for stricter output quality or faster remote runs.</p>
+                        <p class="font-semibold text-white">Remote fallback</p>
+                        <p class="mt-1 text-slate-300">Store an external provider key before quality or latency pressure forces an emergency change.</p>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                        <p class="font-semibold text-white">Encrypted secrets</p>
-                        <p class="mt-1 text-slate-300">Saved API keys stay in the database encrypted at rest.</p>
+                        <p class="font-semibold text-white">Validate after edits</p>
+                        <p class="mt-1 text-slate-300">A saved setting is not trustworthy until a real summary run passes on current content.</p>
                     </div>
                 </div>
             </x-slot:aside>
 
             <div class="mt-5 flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/10">
-                    Providers {{ $providerCount }}
+                    Default {{ $defaultProvider }}
                 </span>
-                <span class="inline-flex items-center rounded-full bg-sky-400/15 px-3 py-1 text-xs font-medium text-sky-100 ring-1 ring-sky-300/20">
-                    Ollama models {{ $ollamaModelCount }}
+                <span class="inline-flex items-center rounded-full bg-amber-400/15 px-3 py-1 text-xs font-medium text-amber-100 ring-1 ring-amber-300/20">
+                    Runtime alerts {{ $runtimeAlertsCount }}
                 </span>
-                <span class="inline-flex items-center rounded-full bg-indigo-400/15 px-3 py-1 text-xs font-medium text-indigo-100 ring-1 ring-indigo-300/20">
-                    OpenAI models {{ $openAiModelCount }}
-                </span>
-                <span class="inline-flex items-center rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-medium text-emerald-100 ring-1 ring-emerald-300/20">
-                    API key {{ $storedOpenAiKey ? 'stored' : 'not configured' }}
+                <span class="inline-flex items-center rounded-full bg-rose-400/15 px-3 py-1 text-xs font-medium text-rose-100 ring-1 ring-rose-300/20">
+                    Failed checks {{ $failedChecks }}
                 </span>
             </div>
         </x-filament.ui.hero>
 
-        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <x-filament.ui.metric-card
                 label="Providers"
                 :value="$providerCount"
-                description="Local and external runtimes available in the admin."
+                description="Runtimes that can be selected from generation actions."
                 tone="indigo"
             />
             <x-filament.ui.metric-card
-                label="Ollama Models"
-                :value="$ollamaModelCount"
-                description="Local presets available from the current configuration."
+                label="Default Provider"
+                :value="$defaultProvider"
+                description="The baseline provider when no override is explicitly chosen."
                 tone="sky"
             />
             <x-filament.ui.metric-card
-                label="OpenAI Models"
-                :value="$openAiModelCount"
-                description="External models available for remote generation."
+                label="Runtime Alerts"
+                :value="$runtimeAlertsCount"
+                description="Queue and runtime signals that deserve operator attention."
                 tone="amber"
             />
             <x-filament.ui.metric-card
+                label="Warning Checks"
+                :value="$warningChecks"
+                description="Degraded checks that are not yet hard failures."
+                tone="gray"
+            />
+            <x-filament.ui.metric-card
                 label="Secret Status"
-                :value="$storedOpenAiKey ? 'saved' : 'missing'"
-                description="Encrypted API key state for the external provider."
+                :value="$storedOpenAiKey ? 'stored' : 'missing'"
+                description="Encrypted API key state for the external fallback."
                 tone="emerald"
             />
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-[1.6fr_0.8fr]">
+        <section class="grid gap-4 xl:grid-cols-2">
+            @foreach ($providerCards as $card)
+                <x-filament.ui.panel
+                    :tone="$card['tone']"
+                    :eyebrow="$card['kind']"
+                    :title="$card['label']"
+                    :badge="$card['status_label']"
+                >
+                    <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $card['message'] }}</p>
+
+                    <div class="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                        <div class="rounded-xl bg-white/80 px-3 py-2 dark:bg-gray-950/60">
+                            <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Base URL</p>
+                            <p class="mt-1 break-words text-gray-900 dark:text-gray-100">{{ $card['base_url'] }}</p>
+                        </div>
+                        <div class="rounded-xl bg-white/80 px-3 py-2 dark:bg-gray-950/60">
+                            <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Model</p>
+                            <p class="mt-1 break-words text-gray-900 dark:text-gray-100">{{ $card['model'] }}</p>
+                        </div>
+                        <div class="rounded-xl bg-white/80 px-3 py-2 dark:bg-gray-950/60">
+                            <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Timeout</p>
+                            <p class="mt-1 text-gray-900 dark:text-gray-100">{{ is_numeric($card['timeout']) ? $card['timeout'] . 's' : $card['timeout'] }}</p>
+                        </div>
+                    </div>
+                </x-filament.ui.panel>
+            @endforeach
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-[1.55fr_0.85fr]">
             <div>
                 {{ $this->content }}
             </div>
 
             <div class="space-y-6 xl:sticky xl:top-6 xl:self-start">
                 <x-filament.ui.panel
-                    eyebrow="Provider Strategy"
-                    title="Recommended Defaults"
+                    eyebrow="Profile Matrix"
+                    title="Default Escalation Paths"
+                    description="Use these as a shared vocabulary for provider/model choices across the team."
                 >
-                    <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-                        <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Fast local baseline</p>
-                            <p class="mt-1">Use Ollama with a small Qwen model for local drafts and test runs.</p>
-                        </div>
-                        <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Balanced daily setup</p>
-                            <p class="mt-1">Keep one dependable local model and one external fallback ready.</p>
-                        </div>
-                        <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Quality escalation</p>
-                            <p class="mt-1">Reserve remote models for final output checks or difficult content.</p>
-                        </div>
+                    <div class="space-y-3">
+                        @foreach ($profiles as $profile)
+                            <article class="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+                                <div class="flex items-start justify-between gap-3">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $profile['label'] }}</p>
+                                    <span class="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                        {{ $profile['key'] }}
+                                    </span>
+                                </div>
+                                <div class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800">
+                                        <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Ollama</p>
+                                        <p class="mt-1 text-gray-900 dark:text-gray-100">{{ $profile['ollama_model'] }}</p>
+                                    </div>
+                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800">
+                                        <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">OpenAI</p>
+                                        <p class="mt-1 text-gray-900 dark:text-gray-100">{{ $profile['openai_model'] }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
                     </div>
                 </x-filament.ui.panel>
 
                 <x-filament.ui.panel
-                    eyebrow="Safety Notes"
-                    title="Before Saving"
+                    eyebrow="Change Discipline"
+                    title="After You Save"
                 >
                     <ol class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
                         <li class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">1. Keep timeouts realistic</span>
-                            <p class="mt-1">Too-low values create false failures, especially on heavier local models.</p>
+                            <span class="font-semibold text-gray-900 dark:text-gray-100">1. Confirm runtime health</span>
+                            <p class="mt-1">If Ollama or Redis is degraded, changing providers will not fix queue pressure by itself.</p>
                         </li>
                         <li class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">2. Prefer explicit defaults</span>
-                            <p class="mt-1">This page should reflect the runtime you actually expect editors to use.</p>
+                            <span class="font-semibold text-gray-900 dark:text-gray-100">2. Test on one real record</span>
+                            <p class="mt-1">Run a fresh summary on current content before treating the new baseline as production-ready.</p>
                         </li>
                         <li class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">3. Re-test after changes</span>
-                            <p class="mt-1">After provider changes, queue one summary generation to validate the new baseline.</p>
+                            <span class="font-semibold text-gray-900 dark:text-gray-100">3. Watch queue behavior</span>
+                            <p class="mt-1">Look for timeout spikes, failed runs, or throughput regressions after the change lands.</p>
                         </li>
                     </ol>
+                </x-filament.ui.panel>
+
+                <x-filament.ui.panel
+                    eyebrow="Operational Links"
+                    title="Validate The Baseline"
+                >
+                    <div class="grid gap-3">
+                        @foreach ($operatingLinks as $link)
+                            <a
+                                href="{{ $link['href'] }}"
+                                @class([
+                                    'group rounded-2xl border px-4 py-4 transition hover:-translate-y-0.5',
+                                    'border-indigo-200 bg-indigo-50/70 dark:border-indigo-800/30 dark:bg-indigo-900/10' => $link['tone'] === 'indigo',
+                                    'border-amber-200 bg-amber-50/70 dark:border-amber-800/30 dark:bg-amber-900/10' => $link['tone'] === 'amber',
+                                    'border-rose-200 bg-rose-50/70 dark:border-rose-800/30 dark:bg-rose-900/10' => $link['tone'] === 'rose',
+                                ])
+                            >
+                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $link['label'] }}</p>
+                                <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $link['description'] }}</p>
+                            </a>
+                        @endforeach
+                    </div>
                 </x-filament.ui.panel>
             </div>
         </section>

@@ -4,8 +4,14 @@ namespace App\Filament\Widgets;
 
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
+use App\Filament\Pages\AiSettings;
+use App\Filament\Pages\QueueCenter;
+use App\Filament\Pages\SystemHealth;
+use App\Filament\Resources\Contents\ContentResource;
+use App\Filament\Resources\Prompts\PromptResource;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
+use App\Models\ContentAiSummaryEvent;
 use App\Models\Prompt;
 use App\Services\RuntimeHealthService;
 use App\Support\AdminPanelAccess;
@@ -48,7 +54,45 @@ class ContentOverviewWidget extends Widget
         $activePrompts = Prompt::query()
             ->where('is_active', true)
             ->count();
-        $alertsCount = count(app(RuntimeHealthService::class)->queueAlerts());
+        $alerts = app(RuntimeHealthService::class)->queueAlerts();
+        $alertsCount = count($alerts);
+        $reviewReadyCount = Content::query()
+            ->where('status', ContentStatus::DRAFT->value)
+            ->whereHas('summary', fn ($query) => $query->where('status', SummaryStatus::READY->value))
+            ->count();
+        $missingSummaryCount = Content::query()
+            ->whereDoesntHave('summary')
+            ->count();
+        $recentContent = Content::query()
+            ->with('summary')
+            ->latest('updated_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Content $content): array => [
+                'id' => (int) $content->id,
+                'title' => (string) $content->title,
+                'slug' => (string) $content->slug,
+                'status' => (string) ($content->status->value ?? $content->status),
+                'summary_status' => (string) ($content->summary?->status?->value ?? 'missing'),
+                'updated_at' => $content->updated_at?->diffForHumans() ?? 'n/a',
+                'href' => ContentResource::getUrl('view', ['record' => $content]),
+            ])
+            ->all();
+        $recentEvents = ContentAiSummaryEvent::query()
+            ->with('content')
+            ->latest('id')
+            ->limit(6)
+            ->get()
+            ->map(fn (ContentAiSummaryEvent $event): array => [
+                'event' => (string) $event->event,
+                'title' => (string) ($event->content?->title ?? 'Unknown content'),
+                'model' => (string) ($event->model ?? 'n/a'),
+                'provider' => (string) ($event->provider ?? 'n/a'),
+                'message' => (string) ($event->message ?? ''),
+                'updated_at' => $event->created_at?->diffForHumans() ?? 'n/a',
+                'href' => $event->content ? ContentResource::getUrl('view', ['record' => $event->content]) : null,
+            ])
+            ->all();
 
         return [
             'totalContent' => $totalContent,
@@ -59,9 +103,21 @@ class ContentOverviewWidget extends Widget
             'failedSummaries' => $failedSummaries,
             'activePrompts' => $activePrompts,
             'alertsCount' => $alertsCount,
+            'reviewReadyCount' => $reviewReadyCount,
+            'missingSummaryCount' => $missingSummaryCount,
+            'alerts' => $alerts,
             'roleLabel' => AdminPanelAccess::user()?->roleLabel() ?? 'Workspace',
             'roleFocus' => $this->roleFocus(),
             'quickLinks' => $this->quickLinks(),
+            'attentionItems' => $this->attentionItems(
+                reviewReadyCount: $reviewReadyCount,
+                pendingSummaries: $pendingSummaries,
+                failedSummaries: $failedSummaries,
+                alertsCount: $alertsCount,
+                missingSummaryCount: $missingSummaryCount,
+            ),
+            'recentContent' => $recentContent,
+            'recentEvents' => $recentEvents,
         ];
     }
 
@@ -70,7 +126,7 @@ class ContentOverviewWidget extends Widget
         $user = AdminPanelAccess::user();
 
         return match (true) {
-            $user?->canManageApiAccess() => 'Own the operating baseline: prompts, providers, secrets, and recovery paths.',
+            $user?->canManageApiAccess() => 'Own the operating baseline: prompts, providers, tokens, secrets, and recovery paths.',
             $user?->canAccessQueueOperations() => 'Prioritize queue lag, failed runs, and runtime health before retrying content.',
             default => 'Keep drafts clean, validate AI output, and publish only after the quality gate is satisfied.',
         };
@@ -85,35 +141,77 @@ class ContentOverviewWidget extends Widget
             [
                 'label' => 'Content Workspace',
                 'description' => 'Open editorial flow, list filters, and generation actions.',
-                'href' => \App\Filament\Resources\Contents\ContentResource::getUrl('index'),
+                'href' => ContentResource::getUrl('index'),
                 'tone' => 'indigo',
             ],
             AdminPanelAccess::canAccessQueueOperations() ? [
                 'label' => 'Queue Center',
                 'description' => 'Inspect pending, generating, and failed summary work.',
-                'href' => \App\Filament\Pages\QueueCenter::getUrl(),
+                'href' => QueueCenter::getUrl(),
                 'tone' => 'amber',
             ] : null,
             AdminPanelAccess::canAccessQueueOperations() ? [
                 'label' => 'System Health',
                 'description' => 'Check Redis, Horizon, Reverb, Ollama, and queue alerts.',
-                'href' => \App\Filament\Pages / SystemHealth::getUrl(),
+                'href' => SystemHealth::getUrl(),
                 'tone' => 'rose',
             ] : null,
             AdminPanelAccess::canManagePrompts() ? [
                 'label' => 'Prompt Registry',
                 'description' => 'Manage active prompt contracts and compare versions.',
-                'href' => \App\Filament\Resources\Prompts\PromptResource::getUrl('index'),
+                'href' => PromptResource::getUrl('index'),
                 'tone' => 'sky',
             ] : null,
             AdminPanelAccess::canManageAiSettings() ? [
                 'label' => 'AI Settings',
                 'description' => 'Tune provider defaults, models, timeouts, and API keys.',
-                'href' => \App\Filament\Pages\AiSettings::getUrl(),
+                'href' => AiSettings::getUrl(),
                 'tone' => 'emerald',
             ] : null,
         ];
 
         return array_values(array_filter($links));
+    }
+
+    /**
+     * @return list<array{title: string, description: string, href: string, tone: string}>
+     */
+    private function attentionItems(
+        int $reviewReadyCount,
+        int $pendingSummaries,
+        int $failedSummaries,
+        int $alertsCount,
+        int $missingSummaryCount,
+    ): array {
+        $items = [
+            [
+                'title' => $reviewReadyCount > 0 ? $reviewReadyCount.' drafts are ready for review' : 'No review-ready drafts right now',
+                'description' => 'Use the content workspace to validate TL;DR, bullets, FAQ, and tags before publishing.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'emerald',
+            ],
+            [
+                'title' => $pendingSummaries > 0 ? $pendingSummaries.' AI runs are still in flight' : 'Queue pressure is calm',
+                'description' => 'Pending and generating runs are easiest to understand from Queue Center.',
+                'href' => AdminPanelAccess::canAccessQueueOperations() ? QueueCenter::getUrl() : ContentResource::getUrl('index'),
+                'tone' => 'sky',
+            ],
+            [
+                'title' => $failedSummaries > 0 ? $failedSummaries.' failed runs need diagnosis' : 'No failed summary runs are waiting',
+                'description' => 'Read the error first. Re-run only after the runtime and prompt contract make sense.',
+                'href' => AdminPanelAccess::canAccessQueueOperations() ? QueueCenter::getUrl() : ContentResource::getUrl('index'),
+                'tone' => 'rose',
+            ],
+            [
+                'title' => $alertsCount > 0 ? $alertsCount.' runtime alerts are active' : 'Runtime alerts are clear',
+                'description' => $missingSummaryCount > 0
+                    ? $missingSummaryCount.' records still have no stored summary and may need first-run generation.'
+                    : 'Infrastructure and content pipeline look stable enough for normal editorial work.',
+                'href' => AdminPanelAccess::canAccessQueueOperations() ? SystemHealth::getUrl() : ContentResource::getUrl('index'),
+                'tone' => 'amber',
+            ],
+        ];
+
+        return $items;
     }
 }
