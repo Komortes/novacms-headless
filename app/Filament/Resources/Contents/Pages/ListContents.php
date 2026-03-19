@@ -35,7 +35,12 @@ class ListContents extends ListRecords
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Compact content operations: filter by tabs, open a record, then run AI generation.';
+        return 'Queue-aware editorial workspace: tabs narrow the working set, row states explain urgency, and bulk actions handle safe batched changes.';
+    }
+
+    public function getDefaultActiveTab(): string|int|null
+    {
+        return 'draft';
     }
 
     public function getTabs(): array
@@ -46,38 +51,36 @@ class ListContents extends ListRecords
             'draft' => Tab::make('Draft')
                 ->badge(Content::query()->where('status', ContentStatus::DRAFT->value)->count())
                 ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', ContentStatus::DRAFT->value)),
-            'published' => Tab::make('Published')
-                ->badge(Content::query()->where('status', ContentStatus::PUBLISHED->value)->count())
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', ContentStatus::PUBLISHED->value)),
             'ai_pending' => Tab::make('AI Pending')
-                ->badge(
-                    Content::query()
-                        ->where(function (Builder $query): void {
-                            $query
-                                ->whereDoesntHave('summary')
-                                ->orWhereHas('summary', fn (Builder $summaryQuery) => $summaryQuery->where('status', SummaryStatus::PENDING->value));
-                        })
-                        ->count(),
-                )
-                ->modifyQueryUsing(function (Builder $query): Builder {
-                    return $query->where(function (Builder $pendingQuery): void {
-                        $pendingQuery
-                            ->whereDoesntHave('summary')
-                            ->orWhereHas('summary', fn (Builder $summaryQuery) => $summaryQuery->where('status', SummaryStatus::PENDING->value));
-                    });
-                }),
+                ->badge($this->pendingAiCount())
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->applyPendingAiScope($query)),
+            'ai_generating' => Tab::make('Generating')
+                ->badge($this->summaryStatusCount(SummaryStatus::GENERATING))
+                ->modifyQueryUsing(
+                    fn (Builder $query): Builder => $query->whereHas(
+                        'summary',
+                        fn (Builder $summaryQuery): Builder => $summaryQuery->where('status', SummaryStatus::GENERATING->value),
+                    ),
+                ),
+            'ai_ready' => Tab::make('AI Ready')
+                ->badge($this->summaryStatusCount(SummaryStatus::READY))
+                ->modifyQueryUsing(
+                    fn (Builder $query): Builder => $query->whereHas(
+                        'summary',
+                        fn (Builder $summaryQuery): Builder => $summaryQuery->where('status', SummaryStatus::READY->value),
+                    ),
+                ),
             'ai_failed' => Tab::make('AI Failed')
-                ->badge(
-                    Content::query()
-                        ->whereHas('summary', fn (Builder $summaryQuery) => $summaryQuery->where('status', SummaryStatus::FAILED->value))
-                        ->count(),
-                )
+                ->badge($this->summaryStatusCount(SummaryStatus::FAILED))
                 ->modifyQueryUsing(
                     fn (Builder $query): Builder => $query->whereHas(
                         'summary',
                         fn (Builder $summaryQuery): Builder => $summaryQuery->where('status', SummaryStatus::FAILED->value),
                     ),
                 ),
+            'published' => Tab::make('Published')
+                ->badge(Content::query()->where('status', ContentStatus::PUBLISHED->value)->count())
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', ContentStatus::PUBLISHED->value)),
         ];
     }
 
@@ -310,6 +313,30 @@ class ListContents extends ListRecords
     public function getHeaderWidgetsColumns(): int|array
     {
         return 1;
+    }
+
+    private function pendingAiCount(): int
+    {
+        return $this->applyPendingAiScope(Content::query())->count();
+    }
+
+    private function summaryStatusCount(SummaryStatus $status): int
+    {
+        return Content::query()
+            ->whereHas(
+                'summary',
+                fn (Builder $summaryQuery): Builder => $summaryQuery->where('status', $status->value),
+            )
+            ->count();
+    }
+
+    private function applyPendingAiScope(Builder $query): Builder
+    {
+        return $query->where(function (Builder $pendingQuery): void {
+            $pendingQuery
+                ->whereDoesntHave('summary')
+                ->orWhereHas('summary', fn (Builder $summaryQuery) => $summaryQuery->where('status', SummaryStatus::PENDING->value));
+        });
     }
 
     #[On('novacms-domain-event')]

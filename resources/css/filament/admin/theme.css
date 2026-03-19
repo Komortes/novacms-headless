@@ -131,6 +131,24 @@
         @apply sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8;
     }
 
+    .fi-simple-layout {
+        background: var(--nova-admin-bg);
+    }
+
+    .fi-simple-layout-header {
+        @apply sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8;
+    }
+
+    .fi-simple-main-ctn {
+        @apply px-4 py-6 sm:px-6 lg:px-8;
+    }
+
+    .fi-simple-main,
+    .fi-simple-page,
+    .fi-simple-page-content {
+        @apply space-y-6;
+    }
+
     .fi-topbar {
         @apply rounded-[1.25rem] border bg-white/74 px-4 py-3 backdrop-blur-xl dark:bg-slate-950/70;
         border-color: var(--nova-admin-border-light);
@@ -321,6 +339,10 @@
         @apply transition-colors hover:bg-slate-50/80 dark:hover:bg-white/[0.02];
     }
 
+    .fi-ta-row.fi-selected {
+        @apply bg-slate-100/80 dark:bg-white/[0.05];
+    }
+
     .fi-ta-cell,
     .fi-ta-header-cell {
         @apply align-top;
@@ -349,5 +371,37 @@
 
     .nova-link-tile {
         @apply block rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 dark:border-slate-800/70 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
+    }
+
+    .nova-empty-state {
+        @apply rounded-[1.3rem] border border-dashed border-slate-300/80 bg-slate-50/75 px-5 py-6 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300;
+    }
+
+    .nova-mini-stat {
+        @apply rounded-[1.1rem] border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm dark:border-slate-800/70 dark:bg-slate-950/55;
+    }
+
+    .nova-mini-stat-label {
+        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+    }
+
+    .nova-mini-stat-value {
+        @apply mt-1 text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50;
+    }
+
+    .nova-mini-stat-description {
+        @apply mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300;
+    }
+
+    .nova-signal-card {
+        @apply rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-950/55;
+    }
+
+    .nova-signal-card-title {
+        @apply text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-100;
+    }
+
+    .nova-signal-card-copy {
+        @apply mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300;
     }
 }

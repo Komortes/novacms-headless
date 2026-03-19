@@ -11,6 +11,7 @@ use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
 use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -25,6 +26,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -36,10 +38,13 @@ class ContentsTable
             ->poll('15s')
             ->striped()
             ->defaultSort('updated_at', 'desc')
-            ->searchPlaceholder('Search title, slug, or locale')
-            ->defaultPaginationPageOption(10)
-            ->paginated([10, 25, 50])
+            ->heading('Editorial queue')
+            ->description('Use tabs to reduce noise, row tones to spot urgency, and bulk actions for safe batched changes.')
+            ->searchPlaceholder('Search title, slug, locale, or AI preview')
+            ->defaultPaginationPageOption(25)
+            ->paginated([25, 50, 100])
             ->recordUrl(fn (Content $record): string => ContentResource::getUrl('view', ['record' => $record]))
+            ->recordClasses(fn (Content $record): array => self::recordClassesFor($record))
             ->columns([
                 TextColumn::make('id')
                     ->sortable()
@@ -49,7 +54,7 @@ class ContentsTable
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::SemiBold)
-                    ->description(fn (Content $record): string => $record->slug.' · '.$record->locale)
+                    ->description(fn (Content $record): string => Str::headline($record->type->value).' · '.$record->slug.' · '.strtoupper($record->locale))
                     ->wrap(),
                 TextColumn::make('slug')
                     ->searchable()
@@ -102,8 +107,8 @@ class ContentsTable
                         default => 'gray',
                     }),
                 TextColumn::make('summary.summary_tldr')
-                    ->label('TL;DR')
-                    ->limit(110)
+                    ->label('AI Preview')
+                    ->limit(96)
                     ->wrap()
                     ->placeholder('Not generated yet')
                     ->toggleable(),
@@ -133,6 +138,8 @@ class ContentsTable
                         ContentStatus::PUBLISHED->value => 'Published',
                         ContentStatus::ARCHIVED->value => 'Archived',
                     ]),
+                SelectFilter::make('locale')
+                    ->options(Content::query()->distinct()->orderBy('locale')->pluck('locale', 'locale')->all()),
                 SelectFilter::make('ai_status')
                     ->label('AI status')
                     ->options([
@@ -252,12 +259,197 @@ class ContentsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('generateSummaries')
+                        ->label('Generate AI')
+                        ->icon(Heroicon::ArrowPath)
+                        ->color('info')
+                        ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                        ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                        ->modalHeading('Generate summaries for selected records')
+                        ->modalDescription('Queues generation for selected records that are not already generating.')
+                        ->modalSubmitActionLabel('Queue generation')
+                        ->deselectRecordsAfterCompletion()
+                        ->schema([
+                            Select::make('provider')
+                                ->label('Provider')
+                                ->options(app(AiSettingsManager::class)->providerOptions())
+                                ->default(fn (): string => (string) config('ai.provider', 'ollama'))
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                                    $profile = (string) ($get('generation_profile') ?: 'balanced');
+                                    $model = app(AiSettingsManager::class)->modelForProfile((string) $state, $profile);
+
+                                    if ($model !== null) {
+                                        $set('model', $model);
+                                    }
+                                })
+                                ->native(false),
+                            Select::make('generation_profile')
+                                ->label('Preset')
+                                ->options(app(AiSettingsManager::class)->profileOptions())
+                                ->default('balanced')
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                                    $model = app(AiSettingsManager::class)->modelForProfile($provider, is_string($state) ? $state : null);
+
+                                    if ($model !== null) {
+                                        $set('model', $model);
+                                    }
+                                })
+                                ->native(false),
+                            Select::make('model')
+                                ->label('Model')
+                                ->options(function (Get $get): array {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+
+                                    return app(AiSettingsManager::class)->modelOptions($provider);
+                                })
+                                ->default(function (Get $get): ?string {
+                                    $provider = (string) ($get('provider') ?: config('ai.provider', 'ollama'));
+                                    $profile = (string) ($get('generation_profile') ?: 'balanced');
+
+                                    return app(AiSettingsManager::class)->modelForProfile($provider, $profile);
+                                })
+                                ->searchable()
+                                ->native(false)
+                                ->helperText('Preset auto-fills model.'),
+                        ])
+                        ->action(function (EloquentCollection $records, array $data): void {
+                            $provider = (string) ($data['provider'] ?? config('ai.provider', 'ollama'));
+                            $selectedModel = trim((string) ($data['model'] ?? ''));
+                            $model = $selectedModel !== '' ? $selectedModel : null;
+                            $queued = 0;
+                            $skipped = 0;
+                            $failed = 0;
+
+                            foreach ($records as $record) {
+                                if (! $record instanceof Content) {
+                                    continue;
+                                }
+
+                                if ($record->summary?->status === SummaryStatus::GENERATING) {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                try {
+                                    app(ContentSummaryDispatcher::class)->dispatch(
+                                        content: $record,
+                                        provider: $provider,
+                                        model: $model,
+                                    );
+
+                                    $queued++;
+                                } catch (Throwable) {
+                                    $failed++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Bulk generation completed')
+                                ->body("Queued {$queued}, skipped {$skipped}, failed {$failed}.")
+                                ->{$failed > 0 ? 'warning' : 'success'}()
+                                ->send();
+                        }),
+                    self::statusBulkAction(
+                        name: 'markPublished',
+                        status: ContentStatus::PUBLISHED,
+                        label: 'Publish',
+                        icon: Heroicon::CheckCircle,
+                        color: 'success',
+                    ),
+                    self::statusBulkAction(
+                        name: 'markDraft',
+                        status: ContentStatus::DRAFT,
+                        label: 'Move to draft',
+                        icon: Heroicon::PencilSquare,
+                        color: 'warning',
+                    ),
+                    self::statusBulkAction(
+                        name: 'markArchived',
+                        status: ContentStatus::ARCHIVED,
+                        label: 'Archive',
+                        icon: Heroicon::ArchiveBox,
+                        color: 'gray',
+                    ),
                     DeleteBulkAction::make()
                         ->visible(fn (): bool => AdminPanelAccess::canDeleteContent()),
                 ]),
             ])
             ->emptyStateIcon(Heroicon::DocumentText)
             ->emptyStateHeading('No content yet')
-            ->emptyStateDescription('Create your first Post or Page, then run "Generate summary" to see AI output.');
+            ->emptyStateDescription('Create your first Post or Page, then use tabs and bulk actions to manage AI generation at scale.')
+            ->emptyStateActions([
+                Action::make('createContent')
+                    ->label('Create content')
+                    ->button()
+                    ->icon(Heroicon::Plus)
+                    ->url(ContentResource::getUrl('create'))
+                    ->visible(fn (): bool => AdminPanelAccess::canCreateContent()),
+            ]);
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private static function recordClassesFor(Content $record): array
+    {
+        $summaryStatus = $record->summary?->status?->value;
+        $editorialStatus = $record->status instanceof ContentStatus ? $record->status->value : (string) $record->status;
+
+        return [
+            '!bg-rose-50/75 dark:!bg-rose-950/15' => $summaryStatus === SummaryStatus::FAILED->value,
+            '!bg-sky-50/75 dark:!bg-sky-950/15' => $summaryStatus === SummaryStatus::GENERATING->value,
+            '!bg-amber-50/75 dark:!bg-amber-950/15' => ($summaryStatus === SummaryStatus::PENDING->value) || blank($summaryStatus),
+            '!bg-emerald-50/75 dark:!bg-emerald-950/15' => ($summaryStatus === SummaryStatus::READY->value) && ($editorialStatus === ContentStatus::DRAFT->value),
+        ];
+    }
+
+    private static function statusBulkAction(
+        string $name,
+        ContentStatus $status,
+        string $label,
+        Heroicon|string $icon,
+        string $color,
+    ): BulkAction {
+        return BulkAction::make($name)
+            ->label($label)
+            ->icon($icon)
+            ->color($color)
+            ->authorize(fn (): bool => AdminPanelAccess::canChangeContentStatus())
+            ->visible(fn (): bool => AdminPanelAccess::canChangeContentStatus())
+            ->requiresConfirmation()
+            ->deselectRecordsAfterCompletion()
+            ->action(function (EloquentCollection $records) use ($status): void {
+                $updated = 0;
+
+                foreach ($records as $record) {
+                    if (! $record instanceof Content) {
+                        continue;
+                    }
+
+                    $currentStatus = $record->status instanceof ContentStatus ? $record->status : ContentStatus::from((string) $record->status);
+
+                    if ($currentStatus === $status) {
+                        continue;
+                    }
+
+                    $record->update([
+                        'status' => $status,
+                    ]);
+
+                    $updated++;
+                }
+
+                Notification::make()
+                    ->title('Statuses updated')
+                    ->body("Moved {$updated} records to {$status->value}.")
+                    ->{$updated > 0 ? 'success' : 'warning'}()
+                    ->send();
+            });
     }
 }

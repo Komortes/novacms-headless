@@ -109,6 +109,16 @@ class ContentOverviewWidget extends Widget
             'roleLabel' => AdminPanelAccess::user()?->roleLabel() ?? 'Workspace',
             'roleFocus' => $this->roleFocus(),
             'quickLinks' => $this->quickLinks(),
+            'workflowLanes' => $this->workflowLanes(
+                draftContent: $draftContent,
+                publishedContent: $publishedContent,
+                reviewReadyCount: $reviewReadyCount,
+                missingSummaryCount: $missingSummaryCount,
+                pendingSummaries: $pendingSummaries,
+                failedSummaries: $failedSummaries,
+                alertsCount: $alertsCount,
+                activePrompts: $activePrompts,
+            ),
             'attentionItems' => $this->attentionItems(
                 reviewReadyCount: $reviewReadyCount,
                 pendingSummaries: $pendingSummaries,
@@ -171,6 +181,88 @@ class ContentOverviewWidget extends Widget
         ];
 
         return array_values(array_filter($links));
+    }
+
+    /**
+     * @return list<array{eyebrow: string, title: string, description: string, href: string, tone: string, cta: string, stats: list<array{label: string, value: string|int}>}>
+     */
+    private function workflowLanes(
+        int $draftContent,
+        int $publishedContent,
+        int $reviewReadyCount,
+        int $missingSummaryCount,
+        int $pendingSummaries,
+        int $failedSummaries,
+        int $alertsCount,
+        int $activePrompts,
+    ): array {
+        $lanes = [
+            [
+                'eyebrow' => 'Editorial lane',
+                'title' => 'Move drafts toward publish',
+                'description' => 'Keep review-ready content moving while identifying which records still need first-run generation.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'indigo',
+                'cta' => 'Open content workspace',
+                'stats' => [
+                    ['label' => 'Drafts', 'value' => $draftContent],
+                    ['label' => 'Review ready', 'value' => $reviewReadyCount],
+                    ['label' => 'Missing AI', 'value' => $missingSummaryCount],
+                ],
+            ],
+            AdminPanelAccess::canAccessQueueOperations() ? [
+                'eyebrow' => 'Runtime lane',
+                'title' => 'Keep the queue honest',
+                'description' => 'Inspect backlog, failed runs, and active alerts before asking editors to retry content manually.',
+                'href' => QueueCenter::getUrl(),
+                'tone' => 'amber',
+                'cta' => 'Open queue center',
+                'stats' => [
+                    ['label' => 'In flight', 'value' => $pendingSummaries],
+                    ['label' => 'Failed', 'value' => $failedSummaries],
+                    ['label' => 'Alerts', 'value' => $alertsCount],
+                ],
+            ] : [
+                'eyebrow' => 'AI lane',
+                'title' => 'Track generation backlog',
+                'description' => 'Even without queue permissions, editorial quality still depends on which records have usable AI output.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'sky',
+                'cta' => 'Review content statuses',
+                'stats' => [
+                    ['label' => 'Review ready', 'value' => $reviewReadyCount],
+                    ['label' => 'Missing AI', 'value' => $missingSummaryCount],
+                    ['label' => 'Failed AI', 'value' => $failedSummaries],
+                ],
+            ],
+            (AdminPanelAccess::canManagePrompts() || AdminPanelAccess::canManageAiSettings()) ? [
+                'eyebrow' => 'Governance lane',
+                'title' => 'Protect the operating baseline',
+                'description' => 'Prompt contracts and provider defaults shape output quality more than one-off retries.',
+                'href' => AdminPanelAccess::canManagePrompts() ? PromptResource::getUrl('index') : AiSettings::getUrl(),
+                'tone' => 'sky',
+                'cta' => AdminPanelAccess::canManagePrompts() ? 'Open prompt registry' : 'Open AI settings',
+                'stats' => [
+                    ['label' => 'Active prompts', 'value' => $activePrompts],
+                    ['label' => 'Runtime alerts', 'value' => $alertsCount],
+                    ['label' => 'Failed AI', 'value' => $failedSummaries],
+                ],
+            ] : [
+                'eyebrow' => 'Quality lane',
+                'title' => 'Use AI output as draft material',
+                'description' => 'Editors should treat generated summaries, bullets, and FAQ blocks as inputs to review, not final truth.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'emerald',
+                'cta' => 'Open review queue',
+                'stats' => [
+                    ['label' => 'Drafts', 'value' => $draftContent],
+                    ['label' => 'Review ready', 'value' => $reviewReadyCount],
+                    ['label' => 'Published', 'value' => $publishedContent],
+                ],
+            ],
+        ];
+
+        return array_values(array_filter($lanes));
     }
 
     /**

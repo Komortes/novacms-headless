@@ -74,6 +74,44 @@
         />
     </section>
 
+    <section class="grid gap-6 xl:grid-cols-3">
+        @foreach ($workflowLanes as $lane)
+            <x-filament.ui.panel
+                :tone="$lane['tone']"
+                :eyebrow="$lane['eyebrow']"
+                :title="$lane['title']"
+                :description="$lane['description']"
+            >
+                <div class="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                    @foreach ($lane['stats'] as $stat)
+                        <div class="nova-mini-stat">
+                            <p class="nova-mini-stat-label">{{ $stat['label'] }}</p>
+                            <p class="nova-mini-stat-value">{{ $stat['value'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+
+                <a href="{{ $lane['href'] }}" class="mt-4 block nova-link-tile">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $lane['cta'] }}</p>
+                            <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Use this lane when the dashboard tells you where the next bottleneck sits.</p>
+                        </div>
+                        <span @class([
+                            'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                            'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $lane['tone'] === 'indigo',
+                            'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $lane['tone'] === 'amber',
+                            'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $lane['tone'] === 'sky',
+                            'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $lane['tone'] === 'emerald',
+                        ])>
+                            open
+                        </span>
+                    </div>
+                </a>
+            </x-filament.ui.panel>
+        @endforeach
+    </section>
+
     <section class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <x-filament.ui.panel
             eyebrow="Needs Attention"
