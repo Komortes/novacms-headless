@@ -2,7 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\Contents\ContentResource;
 use App\Services\AiSettingsManager;
+use App\Services\RuntimeHealthService;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
@@ -43,6 +46,16 @@ class AiSettings extends Page
     protected static ?string $slug = 'settings/ai';
 
     protected string $view = 'filament.pages.ai-settings';
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canManageAiSettings();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
 
     public function getSubheading(): string|Htmlable|null
     {
@@ -207,12 +220,105 @@ class AiSettings extends Page
     {
         $settingsManager = app(AiSettingsManager::class);
         $providers = $settingsManager->providerOptions();
+        $health = app(RuntimeHealthService::class)->collect();
+        $checks = collect($health['checks'])
+            ->filter(fn (mixed $check): bool => is_array($check))
+            ->keyBy(fn (array $check): string => strtolower((string) ($check['component'] ?? '')));
+        $defaultProvider = (string) config('ai.provider', 'ollama');
+        $ollamaCheck = $checks->get('ollama');
+        $ollamaStatus = is_array($ollamaCheck) ? (string) ($ollamaCheck['status'] ?? 'warn') : 'warn';
+        $openAiConfigured = $this->hasStoredOpenAiKey;
+        $openAiStatus = $openAiConfigured ? 'ok' : ($defaultProvider === 'openai' ? 'fail' : 'warn');
+        $failedChecks = $checks->where('status', 'fail')->count();
+        $warningChecks = $checks->where('status', 'warn')->count();
+        $runtimeAlertsCount = count((array) ($health['alerts'] ?? []));
 
         return [
             'providerCount' => count($providers),
             'ollamaModelCount' => count($settingsManager->modelOptions('ollama')),
             'openAiModelCount' => count($settingsManager->modelOptions('openai')),
             'storedOpenAiKey' => $this->hasStoredOpenAiKey,
+            'defaultProvider' => $providers[$defaultProvider] ?? ucfirst($defaultProvider),
+            'runtimeAlertsCount' => $runtimeAlertsCount,
+            'failedChecks' => $failedChecks,
+            'warningChecks' => $warningChecks,
+            'providerCards' => [
+                [
+                    'label' => 'Ollama (local)',
+                    'kind' => 'Local baseline',
+                    'status' => $ollamaStatus,
+                    'status_label' => $this->statusLabel($ollamaStatus),
+                    'tone' => $this->statusTone($ollamaStatus),
+                    'base_url' => (string) ($this->data['ollama_base_url'] ?? config('ai.providers.ollama.base_url') ?? 'n/a'),
+                    'model' => (string) ($this->data['ollama_model'] ?? config('ai.providers.ollama.model') ?? 'n/a'),
+                    'timeout' => (string) ($this->data['ollama_timeout'] ?? config('ai.providers.ollama.timeout') ?? 'n/a'),
+                    'message' => is_array($ollamaCheck)
+                        ? (string) ($ollamaCheck['message'] ?? 'Local runtime check unavailable.')
+                        : 'Local runtime check unavailable.',
+                ],
+                [
+                    'label' => 'OpenAI-compatible',
+                    'kind' => 'External fallback',
+                    'status' => $openAiStatus,
+                    'status_label' => $openAiConfigured ? 'configured' : 'secret missing',
+                    'tone' => $this->statusTone($openAiStatus),
+                    'base_url' => (string) ($this->data['openai_base_url'] ?? config('ai.providers.openai.base_url') ?? 'n/a'),
+                    'model' => (string) ($this->data['openai_model'] ?? config('ai.providers.openai.model') ?? 'n/a'),
+                    'timeout' => (string) ($this->data['openai_timeout'] ?? config('ai.providers.openai.timeout') ?? 'n/a'),
+                    'message' => $openAiConfigured
+                        ? 'Encrypted API key is stored. External fallback is ready when local quality or latency is not enough.'
+                        : ($defaultProvider === 'openai'
+                            ? 'Default provider points to OpenAI-compatible runtime, but no API key is stored.'
+                            : 'No external API key is stored yet. Keep this ready if you need a remote fallback.'),
+                ],
+            ],
+            'profiles' => collect($settingsManager->profiles())
+                ->map(fn (array $profile, string $key): array => [
+                    'key' => $key,
+                    'label' => (string) ($profile['label'] ?? ucfirst($key)),
+                    'ollama_model' => (string) ($profile['models']['ollama'] ?? 'n/a'),
+                    'openai_model' => (string) ($profile['models']['openai'] ?? 'n/a'),
+                ])
+                ->values()
+                ->all(),
+            'operatingLinks' => [
+                [
+                    'label' => 'Content Workspace',
+                    'description' => 'Return to editorial flow and confirm the new baseline on a real record.',
+                    'href' => ContentResource::getUrl('index'),
+                    'tone' => 'indigo',
+                ],
+                [
+                    'label' => 'Queue Center',
+                    'description' => 'Watch pending and failed runs after changing providers or timeouts.',
+                    'href' => QueueCenter::getUrl(),
+                    'tone' => 'amber',
+                ],
+                [
+                    'label' => 'System Health',
+                    'description' => 'Check Ollama, Redis, Horizon, and runtime alerts before blaming prompts.',
+                    'href' => SystemHealth::getUrl(),
+                    'tone' => 'rose',
+                ],
+            ],
         ];
+    }
+
+    private function statusTone(string $status): string
+    {
+        return match ($status) {
+            'ok' => 'emerald',
+            'fail' => 'rose',
+            default => 'amber',
+        };
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return match ($status) {
+            'ok' => 'healthy',
+            'fail' => 'attention required',
+            default => 'degraded',
+        };
     }
 }

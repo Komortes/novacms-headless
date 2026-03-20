@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Contents\Pages;
 
 use App\Filament\Pages\AiSettings;
 use App\Filament\Resources\Contents\ContentResource;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -31,6 +32,7 @@ class ContentFaqInfo extends Page
                 ->label('AI settings')
                 ->icon(Heroicon::Cog6Tooth)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canManageAiSettings())
                 ->url(AiSettings::getUrl()),
         ];
     }

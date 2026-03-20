@@ -29,16 +29,41 @@ class PromptsTable
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()
-                    ->weight('semibold'),
+                    ->weight('semibold')
+                    ->description(function (Prompt $record): string {
+                        $familyVersions = Prompt::query()
+                            ->where('name', $record->name)
+                            ->count();
+                        $activeVersion = Prompt::query()
+                            ->where('name', $record->name)
+                            ->where('is_active', true)
+                            ->value('version');
+
+                        return sprintf(
+                            '%d versions in family%s',
+                            $familyVersions,
+                            $activeVersion ? ' · active '.$activeVersion : '',
+                        );
+                    }),
                 TextColumn::make('version')
                     ->searchable()
                     ->sortable()
                     ->badge()
-                    ->color('gray'),
+                    ->color(fn (Prompt $record): string => $record->is_active ? 'success' : 'gray'),
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean()
                     ->sortable(),
+                TextColumn::make('parameter_count')
+                    ->label('Params')
+                    ->state(fn (Prompt $record): string => (string) count(is_array($record->parameters) ? $record->parameters : []))
+                    ->badge()
+                    ->color('sky'),
+                TextColumn::make('template_lines')
+                    ->label('Template')
+                    ->state(fn (Prompt $record): string => count(preg_split('/\R/u', (string) $record->template) ?: []).' lines')
+                    ->description(fn (Prompt $record): string => Str::limit(trim((string) $record->template), 72))
+                    ->wrap(),
                 TextColumn::make('template')
                     ->label('Template')
                     ->limit(80)
@@ -47,7 +72,8 @@ class PromptsTable
                 TextColumn::make('updated_at')
                     ->label('Updated')
                     ->since()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (Prompt $record): string => $record->updated_at?->format('M j, Y H:i') ?? 'n/a'),
             ])
             ->filters([
                 TernaryFilter::make('is_active')

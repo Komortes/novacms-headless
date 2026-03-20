@@ -93,63 +93,112 @@
 
         <section class="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
             <x-filament.ui.panel
+                :tone="$pressureState['tone']"
                 eyebrow="Operational Snapshot"
-                title="Recent Throughput"
-                :badge="'last ' . $windowHours . 'h'"
+                title="Pressure Map"
+                :badge="$pressureState['label']"
             >
-                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Avg generation</p>
-                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $avgGeneration }}</p>
+                <div class="rounded-[1.35rem] border border-white/70 bg-white/65 px-5 py-4 dark:border-white/10 dark:bg-slate-950/45">
+                    <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $pressureState['description'] }}</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Oldest pending run has been waiting {{ $oldestPendingAge }}, average generation time is {{ $avgGeneration }}, and the latest {{ $windowHours }}h window completed {{ $recentCompletedCount }} runs.
+                    </p>
+                </div>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    @foreach ($bucketMix as $stat)
+                        <div class="nova-mini-stat">
+                            <p class="nova-mini-stat-label">{{ $stat['label'] }}</p>
+                            <p class="nova-mini-stat-value">{{ $stat['value'] }}</p>
+                            <p class="nova-mini-stat-description">{{ $stat['description'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="nova-mini-stat">
+                        <p class="nova-mini-stat-label">Avg generation</p>
+                        <p class="nova-mini-stat-value">{{ $avgGeneration }}</p>
+                        <p class="nova-mini-stat-description">Use this to judge whether pending ETA estimates are realistic.</p>
                     </div>
-                    <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Oldest pending</p>
-                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $oldestPendingAge }}</p>
+                    <div class="nova-mini-stat">
+                        <p class="nova-mini-stat-label">Oldest pending</p>
+                        <p class="nova-mini-stat-value">{{ $oldestPendingAge }}</p>
+                        <p class="nova-mini-stat-description">{{ $stalePendingCount > 0 ? $stalePendingCount . ' items are beyond the ' . $lagThresholdMinutes . 'm threshold.' : 'No stale pending items right now.' }}</p>
                     </div>
-                    <div class="rounded-2xl bg-emerald-50 px-4 py-3 dark:bg-emerald-900/15">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Success rate</p>
-                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentSuccessRate !== null ? $recentSuccessRate . '%' : 'n/a' }}</p>
+                    <div class="nova-mini-stat">
+                        <p class="nova-mini-stat-label">Success rate</p>
+                        <p class="nova-mini-stat-value">{{ $recentSuccessRate !== null ? $recentSuccessRate . '%' : 'n/a' }}</p>
+                        <p class="nova-mini-stat-description">Healthy queue windows should keep this comfortably above failure rate.</p>
                     </div>
-                    <div class="rounded-2xl bg-rose-50 px-4 py-3 dark:bg-rose-900/15">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Failure rate</p>
-                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentFailureRate !== null ? $recentFailureRate . '%' : 'n/a' }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Completed runs</p>
-                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $recentCompletedCount }}</p>
+                    <div class="nova-mini-stat">
+                        <p class="nova-mini-stat-label">Failure rate</p>
+                        <p class="nova-mini-stat-value">{{ $recentFailureRate !== null ? $recentFailureRate . '%' : 'n/a' }}</p>
+                        <p class="nova-mini-stat-description">If this climbs, read failed runs before queueing more work.</p>
                     </div>
                 </div>
             </x-filament.ui.panel>
 
-            <x-filament.ui.panel
-                eyebrow="State Legend"
-                title="How To Read The Buckets"
-            >
-                <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/40 dark:bg-amber-900/10">
-                        <p class="font-semibold text-gray-900 dark:text-gray-100">Pending</p>
-                        <p class="mt-1">Safe to wait. Cancel only when the run is obsolete or queued by mistake.</p>
+            <div class="space-y-6">
+                <x-filament.ui.panel
+                    eyebrow="Decision Routes"
+                    title="Where To Move Next"
+                    description="Treat Queue Center as the routing layer between content, runtime, and configuration."
+                >
+                    <div class="space-y-3">
+                        @foreach ($recommendedRoutes as $route)
+                            <a href="{{ $route['href'] }}" class="nova-link-tile">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $route['label'] }}</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $route['description'] }}</p>
+                                    </div>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                        'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $route['tone'] === 'indigo',
+                                        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $route['tone'] === 'amber',
+                                        'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $route['tone'] === 'rose',
+                                        'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $route['tone'] === 'sky',
+                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $route['tone'] === 'emerald',
+                                    ])>
+                                        {{ $route['badge'] }}
+                                    </span>
+                                </div>
+                            </a>
+                        @endforeach
                     </div>
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-800/40 dark:bg-sky-900/10">
-                        <p class="font-semibold text-gray-900 dark:text-gray-100">Generating</p>
-                        <p class="mt-1">This is active worker time. Re-queuing now usually adds noise, not clarity.</p>
+                </x-filament.ui.panel>
+
+                <x-filament.ui.panel
+                    eyebrow="State Legend"
+                    title="How To Read The Buckets"
+                >
+                    <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+                        <div class="nova-signal-card border-amber-200 bg-amber-50/70 dark:border-amber-800/40 dark:bg-amber-900/10">
+                            <p class="nova-signal-card-title">Pending</p>
+                            <p class="nova-signal-card-copy">Safe to wait. Cancel only when the run is obsolete or queued by mistake.</p>
+                        </div>
+                        <div class="nova-signal-card border-sky-200 bg-sky-50/70 dark:border-sky-800/40 dark:bg-sky-900/10">
+                            <p class="nova-signal-card-title">Generating</p>
+                            <p class="nova-signal-card-copy">This is active worker time. Re-queuing now usually adds noise, not clarity.</p>
+                        </div>
+                        <div class="nova-signal-card border-rose-200 bg-rose-50/70 dark:border-rose-800/40 dark:bg-rose-900/10">
+                            <p class="nova-signal-card-title">Failed</p>
+                            <p class="nova-signal-card-copy">Read the error first. If failures cluster, move to System Health before retrying content.</p>
+                        </div>
                     </div>
-                    <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-800/40 dark:bg-rose-900/10">
-                        <p class="font-semibold text-gray-900 dark:text-gray-100">Failed</p>
-                        <p class="mt-1">Read the error first. If failures cluster, move to System Health before retrying content.</p>
-                    </div>
-                </div>
-            </x-filament.ui.panel>
+                </x-filament.ui.panel>
+            </div>
         </section>
 
         <section class="grid gap-6 xl:grid-cols-2">
             <x-filament.ui.panel
                 eyebrow="Bucket"
                 title="Queued Runs"
-                :badge="count($pendingItems)"
+                :badge="$stalePendingCount > 0 ? count($pendingItems) . ' shown · ' . $stalePendingCount . ' stale' : count($pendingItems) . ' shown'"
             >
                 @if (count($pendingItems) === 0)
-                    <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                    <div class="nova-empty-state">
                         Queue is clean. No pending jobs are waiting for pickup.
                     </div>
                 @else
@@ -165,17 +214,17 @@
                                 </div>
 
                                 <div class="mt-4 grid gap-2 text-xs sm:grid-cols-3">
-                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800">
-                                        <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Position</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['queue_position'] }}</p>
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">Position</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['queue_position'] }}</p>
                                     </div>
-                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800">
-                                        <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Waited</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['wait'] }}</p>
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">Waited</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['wait'] }}</p>
                                     </div>
-                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800">
-                                        <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">ETA</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['eta'] }}</p>
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">ETA</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['eta'] }}</p>
                                     </div>
                                 </div>
 
@@ -205,10 +254,10 @@
             <x-filament.ui.panel
                 eyebrow="Bucket"
                 title="In Progress"
-                :badge="count($generatingItems)"
+                :badge="count($generatingItems) . ' active'"
             >
                 @if (count($generatingItems) === 0)
-                    <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                    <div class="nova-empty-state">
                         No active generation right now.
                     </div>
                 @else
@@ -228,13 +277,13 @@
                                 </div>
 
                                 <div class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
-                                    <div class="rounded-xl bg-sky-50 px-3 py-2 dark:bg-sky-900/20">
-                                        <p class="font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Elapsed</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['elapsed'] }}</p>
+                                    <div class="nova-mini-stat border-sky-200 bg-sky-50/80 dark:border-sky-800/40 dark:bg-sky-900/15">
+                                        <p class="nova-mini-stat-label text-sky-700 dark:text-sky-300">Elapsed</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['elapsed'] }}</p>
                                     </div>
-                                    <div class="rounded-xl bg-sky-50 px-3 py-2 dark:bg-sky-900/20">
-                                        <p class="font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">ETA</p>
-                                        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['eta'] }}</p>
+                                    <div class="nova-mini-stat border-sky-200 bg-sky-50/80 dark:border-sky-800/40 dark:bg-sky-900/15">
+                                        <p class="nova-mini-stat-label text-sky-700 dark:text-sky-300">ETA</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['eta'] }}</p>
                                     </div>
                                 </div>
 
@@ -256,13 +305,14 @@
         </section>
 
         <x-filament.ui.panel
+            tone="rose"
             eyebrow="Bucket"
             title="Recent Failed Runs"
             description="Diagnosis first: identify whether the failure belongs to content, queue pressure, or the AI runtime."
-            :badge="count($failedItems) . ' shown'"
+            :badge="count($failedItems) . ' shown · ' . $recentFailedCount . ' / ' . $windowHours . 'h'"
         >
             @if (count($failedItems) === 0)
-                <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                <div class="nova-empty-state">
                     No failed runs in the latest window.
                 </div>
             @else
@@ -275,18 +325,18 @@
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">#{{ $item['id'] }} · {{ $item['slug'] }} · {{ $item['updated'] }}</p>
                                 </div>
                                 <span class="shrink-0 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-800 dark:bg-rose-900/30 dark:text-rose-200">failed</span>
-                            </div>
+                                </div>
 
-                            <div class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
-                                <div class="rounded-xl bg-white px-3 py-2 dark:bg-gray-900">
-                                    <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Model</p>
-                                    <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['model'] }}</p>
+                                <div class="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+                                    <div class="nova-mini-stat bg-white/95 dark:bg-gray-900/90">
+                                        <p class="nova-mini-stat-label">Model</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['model'] }}</p>
+                                    </div>
+                                    <div class="nova-mini-stat bg-white/95 dark:bg-gray-900/90">
+                                        <p class="nova-mini-stat-label">Latency</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $item['latency'] }}</p>
+                                    </div>
                                 </div>
-                                <div class="rounded-xl bg-white px-3 py-2 dark:bg-gray-900">
-                                    <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Latency</p>
-                                    <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['latency'] }}</p>
-                                </div>
-                            </div>
 
                             <div class="mt-4 rounded-2xl border border-rose-200 bg-white px-4 py-3 text-sm leading-6 text-rose-900 dark:border-rose-800/40 dark:bg-gray-900 dark:text-rose-100">
                                 {{ $item['last_error'] !== '' ? $item['last_error'] : 'No error message captured.' }}

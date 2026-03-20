@@ -9,6 +9,7 @@ use App\Filament\Resources\Prompts\Pages\ListPrompts;
 use App\Filament\Resources\Prompts\Schemas\PromptForm;
 use App\Filament\Resources\Prompts\Tables\PromptsTable;
 use App\Models\Prompt;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -28,6 +29,16 @@ class PromptResource extends Resource
     protected static ?int $navigationSort = 4;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return AdminPanelAccess::canManagePrompts();
+    }
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canManagePrompts();
+    }
 
     public static function form(Schema $schema): Schema
     {

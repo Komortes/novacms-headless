@@ -29,6 +29,11 @@
             'badge' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200',
             'accent' => 'from-sky-300 via-sky-400 to-transparent dark:from-sky-700 dark:via-sky-500',
         ],
+        'indigo' => [
+            'section' => 'border-indigo-200 bg-gradient-to-br from-white to-indigo-50/80 dark:border-indigo-800/40 dark:from-gray-900 dark:to-indigo-950/10',
+            'badge' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200',
+            'accent' => 'from-indigo-300 via-indigo-400 to-transparent dark:from-indigo-700 dark:via-indigo-500',
+        ],
         'emerald' => [
             'section' => 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50/80 dark:border-emerald-800/40 dark:from-gray-900 dark:to-emerald-950/10',
             'badge' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200',
@@ -39,11 +44,12 @@
     $toneClasses = $tones[$tone] ?? $tones['default'];
 @endphp
 
-<section {{ $attributes->class(['relative overflow-hidden rounded-[1.5rem] border shadow-sm transition-shadow duration-200', $toneClasses['section'], $padding]) }}>
+<section {{ $attributes->class(['relative isolate overflow-hidden rounded-[1.5rem] border shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.22)]', $toneClasses['section'], $padding]) }}>
     <div @class([
         'absolute inset-x-0 top-0 h-px bg-gradient-to-r',
         $toneClasses['accent'],
     ])></div>
+    <div class="pointer-events-none absolute -right-10 top-0 h-28 w-28 rounded-full bg-white/30 blur-3xl dark:bg-white/5"></div>
 
     @if (filled($eyebrow) || filled($title) || filled($description) || filled($badge) || isset($headerActions))
         <div class="flex flex-wrap items-center justify-between gap-3">

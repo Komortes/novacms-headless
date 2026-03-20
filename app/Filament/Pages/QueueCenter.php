@@ -3,15 +3,18 @@
 namespace App\Filament\Pages;
 
 use App\Enums\SummaryStatus;
+use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
 use App\Models\ContentAiSummaryEvent;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\RuntimeHealthService;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
@@ -34,9 +37,24 @@ class QueueCenter extends Page
 
     protected string $view = 'filament.pages.queue-center';
 
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canAccessQueueOperations();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canAccess();
+    }
+
     public function getSubheading(): string|Htmlable|null
     {
         return 'Monitor summary queue and cancel queued runs before processing.';
+    }
+
+    public function getMaxContentWidth(): Width|string|null
+    {
+        return Width::Full;
     }
 
     protected function getHeaderActions(): array
@@ -47,6 +65,11 @@ class QueueCenter extends Page
                 ->icon(Heroicon::ArrowPath)
                 ->color('gray')
                 ->action(fn (): null => null),
+            Action::make('contentWorkspace')
+                ->label('Content Workspace')
+                ->icon(Heroicon::DocumentText)
+                ->color('gray')
+                ->url(ContentResource::getUrl('index')),
             Action::make('systemHealth')
                 ->label('System Health')
                 ->icon(Heroicon::Signal)
@@ -112,6 +135,12 @@ class QueueCenter extends Page
         $oldestPendingAgeMs = $oldestPendingSummary?->updated_at?->diffInMilliseconds(now());
         $windowHours = 24;
         $windowStart = now()->subHours($windowHours);
+        $alerts = app(RuntimeHealthService::class)->queueAlerts();
+        $lagThresholdMinutes = max(1, (int) config('ops.alerts.queue_lag_minutes_threshold', 15));
+        $stalePendingCount = ContentAiSummary::query()
+            ->where('status', SummaryStatus::PENDING->value)
+            ->where('updated_at', '<=', now()->subMinutes($lagThresholdMinutes))
+            ->count();
         $recentCompleted = ContentAiSummaryEvent::query()
             ->where('event', 'completed')
             ->where('created_at', '>=', $windowStart)
@@ -165,7 +194,28 @@ class QueueCenter extends Page
             'recentSuccessRate' => $successRate,
             'recentFailureRate' => $failureRate,
             'avgGeneration' => $this->formatDuration($avgGenerationMs > 0 ? $avgGenerationMs : null),
-            'alerts' => app(RuntimeHealthService::class)->queueAlerts(),
+            'alerts' => $alerts,
+            'lagThresholdMinutes' => $lagThresholdMinutes,
+            'stalePendingCount' => $stalePendingCount,
+            'pressureState' => $this->pressureState(
+                queueDepth: $queueDepth,
+                failedCount: $failedCount,
+                alertsCount: count($alerts),
+                stalePendingCount: $stalePendingCount,
+            ),
+            'bucketMix' => $this->bucketMix(
+                pendingCount: $pendingCount,
+                generatingCount: $generatingCount,
+                failedCount: $failedCount,
+                recentCompletedCount: $recentCompleted,
+                stalePendingCount: $stalePendingCount,
+                lagThresholdMinutes: $lagThresholdMinutes,
+            ),
+            'recommendedRoutes' => $this->recommendedRoutes(
+                pendingCount: $pendingCount,
+                failedCount: $failedCount,
+                alertsCount: count($alerts),
+            ),
             'pendingItems' => $this->normalizeItems($pendingItems, 'pending', $avgGenerationMs),
             'generatingItems' => $this->normalizeItems($generatingItems, 'generating', $avgGenerationMs),
             'failedItems' => $this->normalizeItems($failedItems, 'failed', $avgGenerationMs),
@@ -248,6 +298,109 @@ class QueueCenter extends Page
         $event = $events->first(fn (ContentAiSummaryEvent $candidate): bool => $candidate->event === $eventName);
 
         return $event?->created_at;
+    }
+
+    /**
+     * @return array{tone: string, label: string, description: string}
+     */
+    private function pressureState(int $queueDepth, int $failedCount, int $alertsCount, int $stalePendingCount): array
+    {
+        if ($alertsCount > 0 || $stalePendingCount > 0) {
+            return [
+                'tone' => 'rose',
+                'label' => 'Intervention',
+                'description' => 'Queue lag or failure growth is already visible. Stabilize runtime conditions before adding retries.',
+            ];
+        }
+
+        if ($queueDepth > 0 || $failedCount > 0) {
+            return [
+                'tone' => 'amber',
+                'label' => 'Watch Closely',
+                'description' => 'Workers are active, but backlog or failures still deserve operator attention.',
+            ];
+        }
+
+        return [
+            'tone' => 'emerald',
+            'label' => 'Steady',
+            'description' => 'Queue is flowing normally. Use this page as confirmation, not a place to intervene.',
+        ];
+    }
+
+    /**
+     * @return list<array{label: string, value: string|int, description: string, tone: string}>
+     */
+    private function bucketMix(
+        int $pendingCount,
+        int $generatingCount,
+        int $failedCount,
+        int $recentCompletedCount,
+        int $stalePendingCount,
+        int $lagThresholdMinutes,
+    ): array {
+        return [
+            [
+                'label' => 'Pending lane',
+                'value' => $pendingCount,
+                'description' => $stalePendingCount > 0
+                    ? $stalePendingCount.' jobs are older than '.$lagThresholdMinutes.'m.'
+                    : 'Jobs waiting for worker pickup.',
+                'tone' => 'amber',
+            ],
+            [
+                'label' => 'Generating lane',
+                'value' => $generatingCount,
+                'description' => 'Active worker time currently in progress.',
+                'tone' => 'sky',
+            ],
+            [
+                'label' => 'Failed lane',
+                'value' => $failedCount,
+                'description' => 'Runs that need diagnosis before any retry.',
+                'tone' => 'rose',
+            ],
+            [
+                'label' => 'Recent throughput',
+                'value' => $recentCompletedCount,
+                'description' => 'Completed runs captured in the last 24h.',
+                'tone' => 'emerald',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{label: string, description: string, href: string, tone: string, badge: string}>
+     */
+    private function recommendedRoutes(int $pendingCount, int $failedCount, int $alertsCount): array
+    {
+        $routes = [
+            [
+                'label' => $failedCount > 0 ? 'Review impacted content' : 'Return to content workspace',
+                'description' => $failedCount > 0
+                    ? 'Open the records behind failed runs and decide whether the issue belongs to content, prompts, or runtime.'
+                    : 'Go back to the editorial queue once runtime pressure is under control.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'indigo',
+                'badge' => $failedCount > 0 ? $failedCount.' failed' : max($pendingCount, 0).' queued',
+            ],
+            [
+                'label' => 'Check system health',
+                'description' => 'Validate Redis, Horizon, Reverb, and Ollama before canceling or re-queuing more work.',
+                'href' => SystemHealth::getUrl(),
+                'tone' => $alertsCount > 0 ? 'rose' : 'sky',
+                'badge' => $alertsCount > 0 ? $alertsCount.' alerts' : 'runtime',
+            ],
+            AdminPanelAccess::canManageAiSettings() ? [
+                'label' => 'Adjust AI baseline',
+                'description' => 'Tune provider defaults, models, and timeouts if the backlog pattern points to provider mismatch.',
+                'href' => AiSettings::getUrl(),
+                'tone' => 'emerald',
+                'badge' => 'settings',
+            ] : null,
+        ];
+
+        return array_values(array_filter($routes));
     }
 
     private function formatDuration(?int $ms): string

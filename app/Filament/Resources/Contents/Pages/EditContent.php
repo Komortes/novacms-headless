@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Contents\Pages;
 
+use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
@@ -18,6 +20,7 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Throwable;
 
@@ -44,6 +47,7 @@ class EditContent extends EditRecord
                 ->label('Queue')
                 ->icon(Heroicon::Clock)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canAccessQueueOperations())
                 ->url(\App\Filament\Pages\QueueCenter::getUrl()),
             Action::make('faqInfo')
                 ->label('FAQ & info')
@@ -54,11 +58,14 @@ class EditContent extends EditRecord
                 ->label('AI settings')
                 ->icon(Heroicon::Cog6Tooth)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canManageAiSettings())
                 ->url(\App\Filament\Pages\AiSettings::getUrl()),
             Action::make('generateSummary')
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)
                 ->color('info')
+                ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
                 ->modalHeading('Generate summary')
                 ->modalSubmitActionLabel('Queue generation')
                 ->schema([
@@ -150,6 +157,42 @@ class EditContent extends EditRecord
         $this->record = $this->getRecord()->refresh();
     }
 
+    public function quickSetStatus(string $status): void
+    {
+        abort_unless(AdminPanelAccess::canChangeContentStatus(), 403);
+
+        if (! in_array($status, [
+            ContentStatus::DRAFT->value,
+            ContentStatus::PUBLISHED->value,
+            ContentStatus::ARCHIVED->value,
+        ], true)) {
+            return;
+        }
+
+        /** @var Content $record */
+        $record = $this->getRecord();
+
+        try {
+            $record->update([
+                'status' => $status,
+            ]);
+            $this->record = $record->refresh();
+            $this->refreshFormData(['status']);
+
+            Notification::make()
+                ->title('Status updated')
+                ->body('Current status: '.$this->getRecord()->status->value)
+                ->success()
+                ->send();
+        } catch (ValidationException $exception) {
+            Notification::make()
+                ->title('Publish quality gate blocked')
+                ->body(collect($exception->errors())->flatten()->first() ?? 'Please regenerate summary and try again.')
+                ->danger()
+                ->send();
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -158,6 +201,18 @@ class EditContent extends EditRecord
         /** @var Content $record */
         $record = $this->getRecord()->loadMissing('summary');
         $summary = $record->summary;
+        $draftTitle = trim((string) data_get($this, 'data.title', $record->title));
+        $draftSlug = trim((string) data_get($this, 'data.slug', $record->slug));
+        $draftLocale = trim((string) data_get($this, 'data.locale', $record->locale));
+        $draftBody = trim((string) data_get($this, 'data.body', $record->body));
+        $draftStatus = (string) data_get($this, 'data.status', $record->status->value);
+        $wordCount = count(array_filter(preg_split('/\s+/u', strip_tags((string) Str::markdown($draftBody))) ?: []));
+        $readingMinutes = max(1, (int) ceil($wordCount / 220));
+        $qualityGatePassed = $summary?->status === SummaryStatus::READY
+            && filled($summary?->summary_tldr)
+            && count($summary?->summary_bullets ?? []) > 0
+            && count($summary?->summary_tags ?? []) > 0
+            && count($summary?->summary_faq ?? []) > 0;
 
         return [
             'record' => $record,
@@ -166,6 +221,15 @@ class EditContent extends EditRecord
             'bulletCount' => count($summary?->summary_bullets ?? []),
             'faqCount' => count($summary?->summary_faq ?? []),
             'tagCount' => count($summary?->summary_tags ?? []),
+            'draftTitle' => $draftTitle !== '' ? $draftTitle : 'Untitled draft',
+            'draftSlug' => $draftSlug !== '' ? $draftSlug : 'slug-not-set',
+            'draftLocale' => $draftLocale !== '' ? $draftLocale : 'en',
+            'draftStatus' => $draftStatus !== '' ? $draftStatus : ContentStatus::DRAFT->value,
+            'draftBody' => $draftBody,
+            'draftPreviewHtml' => (string) Str::markdown($draftBody !== '' ? $draftBody : '_Start writing to see a rendered preview._'),
+            'wordCount' => $wordCount,
+            'readingMinutes' => $readingMinutes,
+            'qualityGatePassed' => $qualityGatePassed,
         ];
     }
 }

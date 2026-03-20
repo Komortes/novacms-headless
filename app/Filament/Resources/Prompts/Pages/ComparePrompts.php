@@ -34,6 +34,11 @@ class ComparePrompts extends Page
     public array $versionOptions = [];
 
     /**
+     * @var array<int, array{name: string, version: string, is_active: bool, updated_at: string}>
+     */
+    public array $familyVersions = [];
+
+    /**
      * @var array<string, mixed>|null
      */
     public ?array $leftPrompt = null;
@@ -52,6 +57,11 @@ class ComparePrompts extends Page
         'changed' => [],
         'unchanged' => [],
     ];
+
+    /**
+     * @var list<array{key: string, left: string, right: string}>
+     */
+    public array $parameterValueDiffs = [];
 
     /**
      * @var array{left_lines: int, right_lines: int, added_preview: list<string>, removed_preview: list<string>}
@@ -83,6 +93,7 @@ class ComparePrompts extends Page
         }
 
         $this->versionOptions = $this->resolveVersionOptions();
+        $this->familyVersions = $this->resolveFamilyVersions();
 
         if (is_string($requestedLeft) && in_array($requestedLeft, $this->versionOptions, true)) {
             $this->leftVersion = $requestedLeft;
@@ -104,6 +115,7 @@ class ComparePrompts extends Page
     public function updatedPromptName(): void
     {
         $this->versionOptions = $this->resolveVersionOptions();
+        $this->familyVersions = $this->resolveFamilyVersions();
         $this->leftVersion = null;
         $this->rightVersion = null;
         $this->applyDefaultVersions();
@@ -168,6 +180,10 @@ class ComparePrompts extends Page
             (array) $this->leftPrompt['parameters'],
             (array) $this->rightPrompt['parameters'],
         );
+        $this->parameterValueDiffs = $this->buildParameterValueDiffs(
+            (array) $this->leftPrompt['parameters'],
+            (array) $this->rightPrompt['parameters'],
+        );
         $this->templateDiff = $this->buildTemplateDiff(
             (string) $this->leftPrompt['template'],
             (string) $this->rightPrompt['template'],
@@ -187,6 +203,28 @@ class ComparePrompts extends Page
             ->where('name', $this->promptName)
             ->orderByDesc('id')
             ->pluck('version')
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{name: string, version: string, is_active: bool, updated_at: string}>
+     */
+    private function resolveFamilyVersions(): array
+    {
+        if (! $this->promptName) {
+            return [];
+        }
+
+        return Prompt::query()
+            ->where('name', $this->promptName)
+            ->orderByDesc('id')
+            ->get(['name', 'version', 'is_active', 'updated_at'])
+            ->map(fn (Prompt $prompt): array => [
+                'name' => (string) $prompt->name,
+                'version' => (string) $prompt->version,
+                'is_active' => (bool) $prompt->is_active,
+                'updated_at' => $prompt->updated_at?->diffForHumans() ?? 'n/a',
+            ])
             ->all();
     }
 
@@ -213,6 +251,7 @@ class ComparePrompts extends Page
             'changed' => [],
             'unchanged' => [],
         ];
+        $this->parameterValueDiffs = [];
         $this->templateDiff = [
             'left_lines' => 0,
             'right_lines' => 0,
@@ -269,6 +308,23 @@ class ComparePrompts extends Page
     }
 
     /**
+     * @param  array<string, mixed>  $left
+     * @param  array<string, mixed>  $right
+     * @return list<array{key: string, left: string, right: string}>
+     */
+    private function buildParameterValueDiffs(array $left, array $right): array
+    {
+        return collect($this->buildParameterDiff($left, $right)['changed'])
+            ->map(fn (string $key): array => [
+                'key' => $key,
+                'left' => $this->formatParameterValue($left[$key] ?? null),
+                'right' => $this->formatParameterValue($right[$key] ?? null),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array{left_lines: int, right_lines: int, added_preview: list<string>, removed_preview: list<string>}
      */
     private function buildTemplateDiff(string $leftTemplate, string $rightTemplate): array
@@ -306,5 +362,16 @@ class ComparePrompts extends Page
         return collect($lines)
             ->map(fn (string $line): string => rtrim($line))
             ->all();
+    }
+
+    private function formatParameterValue(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) ($value ?? 'null');
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return is_string($encoded) ? $encoded : '[complex value]';
     }
 }

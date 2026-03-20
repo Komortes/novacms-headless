@@ -13,6 +13,7 @@ use App\Filament\Resources\Contents\Tables\ContentsTable;
 use App\Filament\Widgets\ContentOverviewWidget;
 use App\Models\Content;
 use App\Models\ContentAiSummary;
+use App\Support\AdminPanelAccess;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -37,6 +38,16 @@ class ContentResource extends Resource
     protected static ?string $modelLabel = 'Content';
 
     protected static ?string $pluralModelLabel = 'Contents';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return AdminPanelAccess::canAccessContentWorkspace();
+    }
+
+    public static function canAccess(): bool
+    {
+        return AdminPanelAccess::canAccessContentWorkspace();
+    }
 
     public static function form(Schema $schema): Schema
     {

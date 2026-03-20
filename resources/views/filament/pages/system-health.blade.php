@@ -71,94 +71,131 @@
             />
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-[1.7fr_0.9fr]">
+        <section class="grid gap-6 xl:grid-cols-[1.55fr_0.95fr]">
             <x-filament.ui.panel
+                :tone="$failCount > 0 ? 'rose' : ($warnCount > 0 ? 'amber' : 'emerald')"
                 eyebrow="Checks"
-                title="Component Status"
-                :badge="count($checks) . ' checks'"
+                title="Runtime Status Board"
+                :badge="$ok ? 'healthy baseline' : 'needs action'"
             >
-                <div class="grid gap-4 md:grid-cols-2">
-                    @foreach ($checks as $check)
-                        <article @class([
-                            'rounded-2xl border p-4',
-                            'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/40 dark:bg-emerald-900/10' => $check['status'] === 'ok',
-                            'border-amber-200 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-900/10' => $check['status'] === 'warn',
-                            'border-rose-200 bg-rose-50/60 dark:border-rose-800/40 dark:bg-rose-900/10' => $check['status'] === 'fail',
+                <div class="rounded-[1.35rem] border border-white/70 bg-white/65 px-5 py-4 dark:border-white/10 dark:bg-slate-950/45">
+                    <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">
+                        {{ $ok ? 'All required services are reachable. Queue-side retries are safe if content still needs reprocessing.' : 'At least one service is degraded or failing. Fix runtime conditions before treating editor-side symptoms.' }}
+                    </p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Last health snapshot was generated {{ \Illuminate\Support\Carbon::parse($generated_at)->diffForHumans() }}. Use the status board below to separate blocking failures from recoverable warnings.
+                    </p>
+                </div>
+
+                <div class="mt-4 grid gap-4 xl:grid-cols-3">
+                    @foreach ($statusBuckets as $bucket)
+                        <section @class([
+                            'rounded-[1.35rem] border p-4',
+                            'border-rose-200 bg-rose-50/60 dark:border-rose-800/40 dark:bg-rose-900/10' => $bucket['tone'] === 'rose',
+                            'border-amber-200 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-900/10' => $bucket['tone'] === 'amber',
+                            'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/40 dark:bg-emerald-900/10' => $bucket['tone'] === 'emerald',
                         ])>
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $check['component'] }}</p>
-                                    <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $check['message'] }}</p>
+                                    <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $bucket['label'] }}</p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $bucket['description'] }}</p>
                                 </div>
                                 <span @class([
-                                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' => $check['status'] === 'ok',
-                                    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' => $check['status'] === 'warn',
-                                    'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' => $check['status'] === 'fail',
+                                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                    'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' => $bucket['tone'] === 'rose',
+                                    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' => $bucket['tone'] === 'amber',
+                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' => $bucket['tone'] === 'emerald',
                                 ])>
-                                    {{ $check['status'] }}
+                                    {{ count($bucket['items']) }}
                                 </span>
                             </div>
 
-                            @if (($check['meta'] ?? []) !== [])
-                                <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                                    @foreach (($check['meta'] ?? []) as $key => $value)
-                                        <div class="rounded-xl bg-white/80 px-3 py-2 text-xs dark:bg-gray-950/60">
-                                            <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ str_replace('_', ' ', (string) $key) }}</p>
-                                            <p class="mt-1 break-words text-gray-900 dark:text-gray-100">
-                                                @if (is_scalar($value) || $value === null)
-                                                    {{ $value === null ? 'n/a' : (string) $value }}
-                                                @else
-                                                    {{ json_encode($value, JSON_UNESCAPED_SLASHES) }}
-                                                @endif
-                                            </p>
+                            <div class="mt-4 space-y-3">
+                                @forelse ($bucket['items'] as $check)
+                                    <article class="nova-signal-card bg-white/90 dark:bg-slate-950/75">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <p class="nova-signal-card-title">{{ $check['component'] }}</p>
+                                            <span @class([
+                                                'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' => $check['status'] === 'ok',
+                                                'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' => $check['status'] === 'warn',
+                                                'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200' => $check['status'] === 'fail',
+                                            ])>
+                                                {{ $check['status'] }}
+                                            </span>
                                         </div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </article>
+                                        <p class="nova-signal-card-copy">{{ $check['message'] }}</p>
+
+                                        @if (($check['meta'] ?? []) !== [])
+                                            <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                                                @foreach (($check['meta'] ?? []) as $key => $value)
+                                                    <div class="nova-mini-stat bg-white/90 dark:bg-gray-950/70">
+                                                        <p class="nova-mini-stat-label">{{ str_replace('_', ' ', (string) $key) }}</p>
+                                                        <p class="nova-mini-stat-value break-words text-base">
+                                                            @if (is_scalar($value) || $value === null)
+                                                                {{ $value === null ? 'n/a' : (string) $value }}
+                                                            @else
+                                                                {{ json_encode($value, JSON_UNESCAPED_SLASHES) }}
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </article>
+                                @empty
+                                    <div class="nova-empty-state">{{ $bucket['empty'] }}</div>
+                                @endforelse
+                            </div>
+                        </section>
                     @endforeach
                 </div>
             </x-filament.ui.panel>
 
             <div class="space-y-6">
                 <x-filament.ui.panel
-                    eyebrow="Response Order"
-                    title="Where To Act First"
+                    eyebrow="Priority Actions"
+                    title="What To Do With This Snapshot"
                 >
-                    <ol class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-                        <li class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">1. Fix infrastructure failures</span>
-                            <p class="mt-1">Database, Redis, or Ollama failures invalidate editor-side retries.</p>
-                        </li>
-                        <li class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">2. Re-check Queue Center</span>
-                            <p class="mt-1">Once runtime is healthy, inspect pending age, failures, and stale jobs.</p>
-                        </li>
-                        <li class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-                            <span class="font-semibold text-gray-900 dark:text-gray-100">3. Retry failed records</span>
-                            <p class="mt-1">Return to failed runs only after provider and worker conditions are stable.</p>
-                        </li>
-                    </ol>
+                    <div class="space-y-3">
+                        @foreach ($priorityActions as $action)
+                            <div @class([
+                                'nova-signal-card',
+                                'border-rose-200 bg-rose-50/70 dark:border-rose-800/40 dark:bg-rose-900/10' => $action['tone'] === 'rose',
+                                'border-amber-200 bg-amber-50/70 dark:border-amber-800/40 dark:bg-amber-900/10' => $action['tone'] === 'amber',
+                                'border-sky-200 bg-sky-50/70 dark:border-sky-800/40 dark:bg-sky-900/10' => $action['tone'] === 'sky',
+                                'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/40 dark:bg-emerald-900/10' => $action['tone'] === 'emerald',
+                            ])>
+                                <p class="nova-signal-card-title">{{ $action['title'] }}</p>
+                                <p class="nova-signal-card-copy">{{ $action['description'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
                 </x-filament.ui.panel>
 
                 <x-filament.ui.panel
-                    eyebrow="Signals To Watch"
-                    title="Common Runtime Failure Modes"
+                    eyebrow="Operating Routes"
+                    title="Move Back Into The Workflow"
                 >
-                    <div class="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-                        <div class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Ollama unavailable</p>
-                            <p class="mt-1">Expect summary failures and empty embedding runs until the local model service responds again.</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Redis or Horizon degraded</p>
-                            <p class="mt-1">Pending queue depth will grow even if content updates still succeed in the UI.</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-                            <p class="font-semibold text-gray-900 dark:text-gray-100">Reverb issues</p>
-                            <p class="mt-1">Jobs may finish correctly, but status transitions will stop updating in real time.</p>
-                        </div>
+                    <div class="space-y-3">
+                        @foreach ($operatingLinks as $link)
+                            <a href="{{ $link['href'] }}" class="nova-link-tile">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $link['label'] }}</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $link['description'] }}</p>
+                                    </div>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                        'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $link['tone'] === 'indigo',
+                                        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $link['tone'] === 'amber',
+                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $link['tone'] === 'emerald',
+                                    ])>
+                                        open
+                                    </span>
+                                </div>
+                            </a>
+                        @endforeach
                     </div>
                 </x-filament.ui.panel>
             </div>
@@ -190,6 +227,17 @@
                             </div>
                         </article>
                     @endforeach
+                </div>
+            </x-filament.ui.panel>
+        @else
+            <x-filament.ui.panel
+                tone="emerald"
+                eyebrow="Operational Alerts"
+                title="Queue Risk Summary"
+                badge="stable"
+            >
+                <div class="nova-empty-state border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-800/40 dark:bg-emerald-900/10 dark:text-emerald-100">
+                    No queue-risk alerts are active. If editors still report issues, inspect individual content records and prompt changes next.
                 </div>
             </x-filament.ui.panel>
         @endif

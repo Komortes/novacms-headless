@@ -91,6 +91,14 @@ class AiSettingsManager
         return $options;
     }
 
+    /**
+     * @return array<string, array{label: string, models: array<string, string>}>
+     */
+    public function profiles(): array
+    {
+        return $this->generationProfiles();
+    }
+
     public function modelForProfile(string $provider, ?string $profile): ?string
     {
         $resolvedProfile = $this->generationProfiles()[$profile ?? ''] ?? null;

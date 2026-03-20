@@ -46,6 +46,49 @@
                         </li>
                     </ol>
                 </x-filament.ui.panel>
+
+                <x-filament.ui.panel
+                    eyebrow="Family History"
+                    title="Recent Versions"
+                    description="Use compare before activating another version in this family."
+                >
+                    <div class="space-y-3">
+                        @foreach ($familyHistory as $item)
+                            <div class="rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $item['version'] }}</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+                                            {{ $item['template_lines'] }} lines · {{ $item['parameter_count'] }} params · updated {{ $item['updated_at'] }}
+                                        </p>
+                                    </div>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200' => $item['is_active'],
+                                        'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' => ! $item['is_active'],
+                                    ])>
+                                        {{ $item['is_active'] ? 'active' : 'history' }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <a
+                                        href="{{ $item['edit_url'] }}"
+                                        class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                    >
+                                        Open
+                                    </a>
+                                    <a
+                                        href="{{ $item['compare_url'] }}"
+                                        class="inline-flex items-center rounded-full bg-sky-100 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:hover:bg-sky-900/50"
+                                    >
+                                        Compare
+                                    </a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </x-filament.ui.panel>
             </div>
         </section>
     </div>

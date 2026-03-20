@@ -8,6 +8,7 @@ use App\Filament\Resources\Contents\ContentResource;
 use App\Models\Content;
 use App\Services\AiSettingsManager;
 use App\Services\ContentSummaryDispatcher;
+use App\Support\AdminPanelAccess;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -41,6 +42,7 @@ class ViewContent extends ViewRecord
                 ->label('Queue')
                 ->icon(Heroicon::Clock)
                 ->color('gray')
+                ->visible(fn (): bool => AdminPanelAccess::canAccessQueueOperations())
                 ->url(\App\Filament\Pages\QueueCenter::getUrl()),
             Action::make('faqInfo')
                 ->label('FAQ & info')
@@ -51,6 +53,8 @@ class ViewContent extends ViewRecord
                 ->label('Set status')
                 ->icon(Heroicon::AdjustmentsHorizontal)
                 ->color('gray')
+                ->authorize(fn (): bool => AdminPanelAccess::canChangeContentStatus())
+                ->visible(fn (): bool => AdminPanelAccess::canChangeContentStatus())
                 ->schema([
                     Select::make('status')
                         ->label('Status')
@@ -63,33 +67,13 @@ class ViewContent extends ViewRecord
                         ->required()
                         ->native(false),
                 ])
-                ->action(function (array $data): void {
-                    /** @var Content $record */
-                    $record = $this->getRecord();
-
-                    try {
-                        $record->update([
-                            'status' => $data['status'],
-                        ]);
-                        $this->record = $record->refresh();
-
-                        Notification::make()
-                            ->title('Status updated')
-                            ->body('Current status: '.$this->getRecord()->status->value)
-                            ->success()
-                            ->send();
-                    } catch (ValidationException $exception) {
-                        Notification::make()
-                            ->title('Publish quality gate blocked')
-                            ->body(collect($exception->errors())->flatten()->first() ?? 'Please regenerate summary and try again.')
-                            ->danger()
-                            ->send();
-                    }
-                }),
+                ->action(fn (array $data): mixed => $this->quickSetStatus((string) $data['status'])),
             Action::make('generateSummary')
                 ->label('Generate summary')
                 ->icon(Heroicon::ArrowPath)
                 ->color('info')
+                ->authorize(fn (): bool => AdminPanelAccess::canQueueSummaries())
+                ->visible(fn (): bool => AdminPanelAccess::canQueueSummaries())
                 ->modalHeading('Generate summary')
                 ->modalSubmitActionLabel('Queue generation')
                 ->schema([
@@ -180,6 +164,41 @@ class ViewContent extends ViewRecord
         return Width::Full;
     }
 
+    public function quickSetStatus(string $status): void
+    {
+        abort_unless(AdminPanelAccess::canChangeContentStatus(), 403);
+
+        if (! in_array($status, [
+            ContentStatus::DRAFT->value,
+            ContentStatus::PUBLISHED->value,
+            ContentStatus::ARCHIVED->value,
+        ], true)) {
+            return;
+        }
+
+        /** @var Content $record */
+        $record = $this->getRecord();
+
+        try {
+            $record->update([
+                'status' => $status,
+            ]);
+            $this->record = $record->refresh();
+
+            Notification::make()
+                ->title('Status updated')
+                ->body('Current status: '.$this->getRecord()->status->value)
+                ->success()
+                ->send();
+        } catch (ValidationException $exception) {
+            Notification::make()
+                ->title('Publish quality gate blocked')
+                ->body(collect($exception->errors())->flatten()->first() ?? 'Please regenerate summary and try again.')
+                ->danger()
+                ->send();
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -196,11 +215,26 @@ class ViewContent extends ViewRecord
         $summaryStatus = $summary?->status?->value ?? SummaryStatus::PENDING->value;
         $publicationStatus = $record->status->value;
         $latestEvent = $record->latestSummaryEvent;
+        $recentEvents = $record->summaryEvents()
+            ->latest('id')
+            ->limit(6)
+            ->get()
+            ->map(fn ($event): array => [
+                'event' => (string) $event->event,
+                'message' => (string) ($event->message ?? ''),
+                'provider' => (string) ($event->provider ?? 'n/a'),
+                'model' => (string) ($event->model ?? 'n/a'),
+                'wait_ms' => is_numeric($event->wait_ms) ? ((int) $event->wait_ms).' ms' : 'n/a',
+                'duration_ms' => is_numeric($event->duration_ms) ? ((int) $event->duration_ms).' ms' : 'n/a',
+                'when' => $event->created_at?->diffForHumans() ?? 'n/a',
+            ])
+            ->all();
         $qualityGatePassed = $summaryStatus === SummaryStatus::READY->value
             && filled($summary?->summary_tldr)
             && $bulletCount > 0
             && $tagCount > 0
             && $faqCount > 0;
+        $readingMinutes = max(1, (int) ceil($wordCount / 220));
 
         $nextStep = match ($summaryStatus) {
             SummaryStatus::FAILED->value => 'Inspect the last error, verify provider health, then queue a fresh run.',
@@ -217,6 +251,7 @@ class ViewContent extends ViewRecord
             'summaryStatus' => $summaryStatus,
             'publicationStatus' => $publicationStatus,
             'wordCount' => $wordCount,
+            'readingMinutes' => $readingMinutes,
             'bulletCount' => $bulletCount,
             'faqCount' => $faqCount,
             'tagCount' => $tagCount,
@@ -225,6 +260,18 @@ class ViewContent extends ViewRecord
             'latestEventName' => $latestEvent?->event ? Str::headline((string) $latestEvent->event) : 'No events yet',
             'latestEventWhen' => $latestEvent?->created_at?->diffForHumans() ?? 'n/a',
             'latestEventMessage' => $latestEvent?->message ?: 'No additional event details captured.',
+            'summaryTldr' => (string) ($summary?->summary_tldr ?? ''),
+            'summaryBullets' => $summary?->summary_bullets ?? [],
+            'summaryFaq' => $summary?->summary_faq ?? [],
+            'summaryTags' => $summary?->summary_tags ?? [],
+            'metaDescription' => (string) ($summary?->summary_meta_description ?? ''),
+            'summaryModel' => (string) ($summary?->model ?? 'n/a'),
+            'summaryPromptVersion' => (string) ($summary?->prompt_version ?? 'n/a'),
+            'summaryTokensIn' => $summary?->tokens_in ?? 'n/a',
+            'summaryTokensOut' => $summary?->tokens_out ?? 'n/a',
+            'summaryLatency' => is_numeric($summary?->generation_ms) ? ((int) $summary->generation_ms).' ms' : 'n/a',
+            'recentEvents' => $recentEvents,
+            'renderedBody' => (string) Str::markdown((string) $record->body),
         ];
     }
 

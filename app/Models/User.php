@@ -3,13 +3,16 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -23,6 +26,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -45,12 +49,97 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->canAccessAdminPanel();
     }
 
     public function apiAccessTokens(): HasMany
     {
         return $this->hasMany(ApiAccessToken::class)->latest('id');
+    }
+
+    public function roleLabel(): string
+    {
+        return ($this->role ?? UserRole::EDITOR)->label();
+    }
+
+    public function hasRole(UserRole $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function canAccessAdminPanel(): bool
+    {
+        return in_array($this->role, [
+            UserRole::ADMIN,
+            UserRole::EDITOR,
+            UserRole::OPERATOR,
+        ], true);
+    }
+
+    public function canAccessContentWorkspace(): bool
+    {
+        return $this->canAccessAdminPanel();
+    }
+
+    public function canCreateContent(): bool
+    {
+        return in_array($this->role, [UserRole::ADMIN, UserRole::EDITOR], true);
+    }
+
+    public function canUpdateContent(): bool
+    {
+        return $this->canCreateContent();
+    }
+
+    public function canDeleteContent(): bool
+    {
+        return $this->role === UserRole::ADMIN;
+    }
+
+    public function canChangeContentStatus(): bool
+    {
+        return $this->canCreateContent();
+    }
+
+    public function canQueueSummaries(): bool
+    {
+        return $this->canAccessContentWorkspace();
+    }
+
+    public function canAccessQueueOperations(): bool
+    {
+        return in_array($this->role, [UserRole::ADMIN, UserRole::OPERATOR], true);
+    }
+
+    public function canManageContentCatalog(): bool
+    {
+        return $this->role === UserRole::ADMIN;
+    }
+
+    public function canManageEmbeddings(): bool
+    {
+        return in_array($this->role, [UserRole::ADMIN, UserRole::OPERATOR], true);
+    }
+
+    public function canManageAiSettings(): bool
+    {
+        return $this->role === UserRole::ADMIN;
+    }
+
+    public function canManagePrompts(): bool
+    {
+        return $this->role === UserRole::ADMIN;
+    }
+
+    public function canManageApiAccess(): bool
+    {
+        return $this->role === UserRole::ADMIN;
     }
 
     /**

@@ -60,9 +60,84 @@
         />
         <x-filament.ui.metric-card
             label="AI Attention"
-            :value="$pendingAiCount + $failedAiCount"
+            :value="$pendingAiCount + $generatingAiCount + $failedAiCount"
             description="Queued, generating, or failed runs that still need operator attention."
             tone="rose"
         />
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-[1.25fr_0.95fr]">
+        <x-filament.ui.panel
+            tone="indigo"
+            eyebrow="Fast Filters"
+            title="Open The Right Working Set"
+            description="These routes map directly to list tabs, so you can start in the correct lane instead of searching the whole table."
+        >
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($filterRoutes as $route)
+                    <a href="{{ $route['href'] }}" class="nova-link-tile">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $route['label'] }}</p>
+                                <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $route['description'] }}</p>
+                            </div>
+                            <span @class([
+                                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $route['tone'] === 'indigo',
+                                'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $route['tone'] === 'amber',
+                                'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $route['tone'] === 'rose',
+                                'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $route['tone'] === 'sky',
+                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $route['tone'] === 'emerald',
+                            ])>
+                                {{ $route['badge'] }}
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
+
+        <x-filament.ui.panel
+            eyebrow="Working Rules"
+            title="How To Use The List Well"
+        >
+            <div class="space-y-3">
+                <div class="nova-signal-card">
+                    <p class="nova-signal-card-title">Start from tabs, not global search</p>
+                    <p class="nova-signal-card-copy">`Draft`, `Pending`, `Generating`, `Ready`, and `Failed` are operational lanes, not just filters.</p>
+                </div>
+                <div class="nova-signal-card">
+                    <p class="nova-signal-card-title">Use row color before opening the record</p>
+                    <p class="nova-signal-card-copy">The list now signals failure, queue activity, and review-ready drafts directly in the table.</p>
+                </div>
+                <div class="nova-signal-card">
+                    <p class="nova-signal-card-title">Reserve bulk actions for clear batch work</p>
+                    <p class="nova-signal-card-copy">Mass-generate AI only when provider and prompt baseline are already understood.</p>
+                </div>
+            </div>
+
+            @if ($workspaceRoutes !== [])
+                <div class="mt-4 space-y-3">
+                    @foreach ($workspaceRoutes as $route)
+                        <a href="{{ $route['href'] }}" class="nova-link-tile">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $route['label'] }}</p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $route['description'] }}</p>
+                                </div>
+                                <span @class([
+                                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $route['tone'] === 'indigo',
+                                    'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $route['tone'] === 'amber',
+                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $route['tone'] === 'emerald',
+                                ])>
+                                    open
+                                </span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        </x-filament.ui.panel>
     </section>
 </div>
