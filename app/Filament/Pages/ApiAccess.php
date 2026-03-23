@@ -16,6 +16,7 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class ApiAccess extends Page
 {
@@ -52,7 +53,7 @@ class ApiAccess extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Issue and revoke external API bearer tokens for GraphQL clients and integrations.';
+        return 'Issue and revoke GraphQL bearer tokens for frontend consumers, preview apps, and integrations.';
     }
 
     public function getMaxContentWidth(): Width|string|null
@@ -243,6 +244,14 @@ class ApiAccess extends Page
             'tokenCount' => $allTokens->count(),
             'tokens' => $tokens,
             'recentUsage' => $recentUsage,
+            'registryLanes' => $this->registryLanes(
+                activeCount: $activeCount,
+                expiringSoonCount: $expiringSoonCount,
+                neverUsedCount: $neverUsedCount,
+                privilegedCount: $privilegedCount,
+            ),
+            'principalSummaries' => $this->principalSummaries($allTokens),
+            'rotationRules' => $this->rotationRules(),
             'abilityGuides' => $this->abilityGuides(),
             'clientSnippets' => $this->clientSnippets(),
         ];
@@ -298,6 +307,103 @@ class ApiAccess extends Page
             ->all();
 
         return in_array('*', $abilities, true) || in_array('graphql:admin', $abilities, true);
+    }
+
+    /**
+     * @return list<array{label: string, count: int, description: string, tone: string, href: string}>
+     */
+    private function registryLanes(
+        int $activeCount,
+        int $expiringSoonCount,
+        int $neverUsedCount,
+        int $privilegedCount,
+    ): array {
+        return [
+            [
+                'label' => 'Usable now',
+                'count' => $activeCount,
+                'description' => 'Clients that can authenticate successfully right now.',
+                'tone' => 'emerald',
+                'href' => '#token-registry',
+            ],
+            [
+                'label' => 'Rotate soon',
+                'count' => $expiringSoonCount,
+                'description' => 'Usable tokens hitting expiry in the next 7 days.',
+                'tone' => 'amber',
+                'href' => '#token-registry',
+            ],
+            [
+                'label' => 'Never used',
+                'count' => $neverUsedCount,
+                'description' => 'Issued clients with no observed request yet.',
+                'tone' => 'sky',
+                'href' => '#recent-usage',
+            ],
+            [
+                'label' => 'High privilege',
+                'count' => $privilegedCount,
+                'description' => 'Admin or wildcard tokens that deserve tighter ownership.',
+                'tone' => 'rose',
+                'href' => '#token-registry',
+            ],
+        ];
+    }
+
+    /**
+     * @param  Collection<int, ApiAccessToken>  $tokens
+     * @return list<array{principal: string, total: int, usable: int, privileged: int, last_used: string}>
+     */
+    private function principalSummaries(Collection $tokens): array
+    {
+        return $tokens
+            ->groupBy(fn (ApiAccessToken $token): string => (string) ($token->user_id ?? 'unknown'))
+            ->map(function (Collection $group): array {
+                /** @var ApiAccessToken|null $first */
+                $first = $group->first();
+                $user = $first?->user;
+                $label = trim(($user?->name ? $user->name.' · ' : '').($user?->email ?? 'unknown user'));
+                $lastUsedAt = $group
+                    ->filter(fn (ApiAccessToken $token): bool => $token->last_used_at !== null)
+                    ->sortByDesc('last_used_at')
+                    ->first()?->last_used_at;
+
+                return [
+                    'principal' => $label,
+                    'total' => $group->count(),
+                    'usable' => $group->filter(fn (ApiAccessToken $token): bool => $token->isUsable())->count(),
+                    'privileged' => $group->filter(fn (ApiAccessToken $token): bool => $this->isPrivilegedToken($token))->count(),
+                    'last_used' => $lastUsedAt?->diffForHumans() ?? 'never',
+                ];
+            })
+            ->sortByDesc('total')
+            ->take(6)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{title: string, description: string, tone: string}>
+     */
+    private function rotationRules(): array
+    {
+        return [
+            [
+                'title' => 'Issue read-only first',
+                'description' => 'Start new clients at `graphql:read-internal` and add write/admin only when the integration contract proves it needs more.',
+                'tone' => 'emerald',
+            ],
+            [
+                'title' => 'Set expiry on uncertain clients',
+                'description' => 'Anything temporary, preview-only, or contractor-owned should have a bounded lifetime instead of a permanent token.',
+                'tone' => 'amber',
+            ],
+            [
+                'title' => 'Revoke on ownership drift',
+                'description' => 'If the person, service, or app owner changes, treat the old token as untrusted and rotate immediately.',
+                'tone' => 'rose',
+            ],
+        ];
     }
 
     /**

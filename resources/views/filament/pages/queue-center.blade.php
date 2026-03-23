@@ -4,7 +4,7 @@
             tone="slate"
             eyebrow="Queue Operations"
             title="Queue Control Panel"
-            description="Watch queue pressure, inspect active work, and decide whether the next action is to cancel, wait, or move to system-level troubleshooting."
+            description="Watch AI summarization queue pressure, inspect active work, and decide whether the next action is to cancel, wait, or move to runtime troubleshooting."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operator Playbook</p>
@@ -143,7 +143,7 @@
                 <x-filament.ui.panel
                     eyebrow="Decision Routes"
                     title="Where To Move Next"
-                    description="Treat Queue Center as the routing layer between content, runtime, and configuration."
+                    description="Treat Queue Center as the routing layer between content operations, runtime health, and AI configuration."
                 >
                     <div class="space-y-3">
                         @foreach ($recommendedRoutes as $route)
@@ -308,7 +308,7 @@
             tone="rose"
             eyebrow="Bucket"
             title="Recent Failed Runs"
-            description="Diagnosis first: identify whether the failure belongs to content, queue pressure, or the AI runtime."
+            description="Diagnosis first: identify whether the failure belongs to content, queue pressure, prompt contract, or the AI runtime."
             :badge="count($failedItems) . ' shown · ' . $recentFailedCount . ' / ' . $windowHours . 'h'"
         >
             @if (count($failedItems) === 0)

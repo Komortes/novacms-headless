@@ -216,7 +216,12 @@ class RuntimeHealthService
             $output = trim(Artisan::output());
             $normalized = strtolower($output);
 
-            if (str_contains($normalized, 'active') || str_contains($normalized, 'running')) {
+            if (
+                preg_match('/\bhorizon is running\b/i', $output) === 1
+                || preg_match('/\bhorizon is active\b/i', $output) === 1
+                || $normalized === 'running'
+                || $normalized === 'active'
+            ) {
                 return $this->ok('Horizon', 'Horizon is active.', [
                     'status' => $output,
                 ]);

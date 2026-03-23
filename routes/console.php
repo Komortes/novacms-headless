@@ -11,6 +11,7 @@ use App\Services\ContentEmbeddingGenerator;
 use App\Services\ContentEmbeddingReindexer;
 use App\Services\ContentSummaryDispatcher;
 use App\Services\ContentSummaryGenerator;
+use App\Services\DemoWorkspaceService;
 use App\Services\RuntimeE2eSmokeService;
 use App\Services\RuntimeHealthService;
 use Illuminate\Foundation\Inspiring;
@@ -223,6 +224,114 @@ Artisan::command('content:import {source? : Path to content bundle JSON} {--demo
 
     return Command::SUCCESS;
 })->purpose('Import content records from JSON or load the bundled demo dataset');
+
+Artisan::command('demo:check {--json}', function (DemoWorkspaceService $demoWorkspace): int {
+    $report = $demoWorkspace->report();
+
+    if ((bool) $this->option('json')) {
+        $this->line(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+
+        return $report['ok'] ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    $scenarioRows = collect($report['scenario_checks'])
+        ->map(fn (array $check): array => [
+            $check['label'],
+            strtoupper((string) $check['status']),
+            $check['message'],
+        ])
+        ->all();
+
+    $runtimeRows = collect($report['runtime_checks'])
+        ->map(fn (array $check): array => [
+            $check['component'],
+            strtoupper((string) $check['status']),
+            (string) $check['message'],
+            ($check['meta'] ?? []) !== [] ? (json_encode($check['meta'], JSON_UNESCAPED_SLASHES) ?: '{}') : '-',
+        ])
+        ->all();
+
+    $summary = $report['summary'];
+
+    $this->table(['Scenario Check', 'Status', 'Message'], $scenarioRows);
+    $this->newLine();
+    $this->line(sprintf(
+        'Demo users: %d/%d | Content: %d | Published: %d | Drafts: %d | Ready AI: %d | Failed AI: %d | Active prompts: %d',
+        $summary['demo_users_found'],
+        $summary['demo_users_expected'],
+        $summary['content'],
+        $summary['published'],
+        $summary['drafts'],
+        $summary['ready_summaries'],
+        $summary['failed_summaries'],
+        $summary['active_prompts'],
+    ));
+
+    if ($runtimeRows !== []) {
+        $this->newLine();
+        $this->table(['Component', 'Status', 'Message', 'Meta'], $runtimeRows);
+    }
+
+    if (($report['alerts'] ?? []) !== []) {
+        $this->newLine();
+        $this->warn('Operational alerts:');
+
+        foreach ($report['alerts'] as $alert) {
+            $this->line(sprintf(
+                '- [%s] %s | value=%s threshold=%s',
+                strtoupper((string) $alert['severity']),
+                (string) $alert['title'],
+                (string) $alert['value'],
+                (string) $alert['threshold'],
+            ));
+        }
+    }
+
+    $this->newLine();
+    $this->line('Generated at: '.(string) $report['generated_at']);
+
+    if ($report['ok']) {
+        $this->info('Demo environment is ready.');
+
+        return Command::SUCCESS;
+    }
+
+    if (! $report['scenario_ok']) {
+        $this->error('Demo scenario drifted. Run `make demo-reset` before the next walkthrough.');
+    } else {
+        $this->error('Demo runtime is degraded. Fix the stack before the next walkthrough.');
+    }
+
+    return Command::FAILURE;
+})->purpose('Validate demo runtime, seeded users, content states, and prompt baseline');
+
+Artisan::command('demo:reset {--force}', function (DemoWorkspaceService $demoWorkspace): int {
+    if (! (bool) $this->option('force') && ! $this->confirm('This will rebuild the database and restore the seeded demo state. Continue?')) {
+        $this->line('Cancelled.');
+
+        return Command::SUCCESS;
+    }
+
+    $report = $demoWorkspace->reset();
+    $summary = $report['summary'];
+
+    $this->info('Demo environment reset.');
+    $this->line(sprintf('Demo users: %d/%d', $summary['demo_users_found'], $summary['demo_users_expected']));
+    $this->line(sprintf('Content: %d', $summary['content']));
+    $this->line(sprintf('Published: %d | Drafts: %d', $summary['published'], $summary['drafts']));
+    $this->line(sprintf('Ready AI: %d | Failed AI: %d', $summary['ready_summaries'], $summary['failed_summaries']));
+    $this->line(sprintf('Active prompts: %d', $summary['active_prompts']));
+
+    if ($report['scenario_ok']) {
+        $this->info('Seeded demo story restored.');
+
+        return Command::SUCCESS;
+    }
+
+    $this->error('Demo reset completed, but the seeded scenario is still incomplete.');
+
+    return Command::FAILURE;
+})->purpose('Rebuild the database and restore the seeded demo environment');
 
 Artisan::command('api-token:create {user : User ID or email} {name : Token label} {--ability=* : Repeatable token abilities} {--expires-days=}', function () {
     $userArgument = trim((string) $this->argument('user'));

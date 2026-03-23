@@ -14,6 +14,10 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response
+            ->assertStatus(200)
+            ->assertSee('Headless CMS with built-in AI summarization')
+            ->assertSee('make demo')
+            ->assertSee('admin@novacms.test');
     }
 }

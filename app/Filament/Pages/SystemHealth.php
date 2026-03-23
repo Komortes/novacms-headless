@@ -40,7 +40,7 @@ class SystemHealth extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Runtime checks for Postgres/pgvector, Redis, Horizon, Reverb, and Ollama with queue risk alerts.';
+        return 'Runtime checks for the headless CMS stack: Postgres/pgvector, Redis, Horizon, Reverb, and Ollama.';
     }
 
     public function getMaxContentWidth(): Width|string|null

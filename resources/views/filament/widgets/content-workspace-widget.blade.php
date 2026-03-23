@@ -2,8 +2,8 @@
     <x-filament.ui.hero
         tone="slate"
         eyebrow="Content Workspace"
-        title="Editorial Queue-Aware Overview"
-        description="Use tabs and filters to narrow the content set, then open a record only when you need deeper review or regeneration."
+        title="Headless Content Operations"
+        description="Use tabs and filters to narrow the content set, then open a record only when you need deeper review, AI regeneration, or delivery decisions."
     >
         <x-slot:aside>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Fast Path</p>
@@ -55,7 +55,7 @@
         <x-filament.ui.metric-card
             label="Published"
             :value="$publishedCount"
-            description="Content already available for delivery."
+            description="Content already available to headless consumers."
             tone="emerald"
         />
         <x-filament.ui.metric-card
@@ -71,7 +71,7 @@
             tone="indigo"
             eyebrow="Fast Filters"
             title="Open The Right Working Set"
-            description="These routes map directly to list tabs, so you can start in the correct lane instead of searching the whole table."
+            description="These routes map directly to list tabs, so you can start in the correct content or AI lane instead of searching the whole table."
         >
             <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($filterRoutes as $route)
@@ -112,7 +112,7 @@
                 </div>
                 <div class="nova-signal-card">
                     <p class="nova-signal-card-title">Reserve bulk actions for clear batch work</p>
-                    <p class="nova-signal-card-copy">Mass-generate AI only when provider and prompt baseline are already understood.</p>
+                    <p class="nova-signal-card-copy">Mass-generate AI only when the provider baseline and prompt contract are already understood.</p>
                 </div>
             </div>
 

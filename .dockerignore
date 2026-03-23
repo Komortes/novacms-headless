@@ -1,0 +1,14 @@
+.git
+.github
+.DS_Store
+.env
+node_modules
+vendor
+storage/*.key
+storage/logs
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+bootstrap/cache/*
+output

@@ -3,7 +3,7 @@
         tone="slate"
         eyebrow="Control Surface"
         title="NovaCMS Admin"
-        description="A role-aware workspace for content operations, prompt governance, and runtime oversight."
+        description="A role-aware control surface for headless content operations, AI summarization, prompt governance, and runtime health."
     >
         <x-slot:aside>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Current Focus</p>
@@ -74,6 +74,142 @@
         />
     </section>
 
+    <section class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <x-filament.ui.panel
+            eyebrow="Start Here"
+            title="Guided Product Walkthrough"
+            :description="$demoReport['scenario_ok']
+                ? 'Use these steps to tell the product story from seeded content to headless delivery without improvising the flow.'
+                : 'The seeded walkthrough drifted. Restore the demo before using this dashboard as your tour script.'"
+            :badge="$demoReport['scenario_ok'] ? 'seeded' : 'needs reset'"
+        >
+            <div class="space-y-3">
+                @foreach ($demoWalkthrough as $step)
+                    <a href="{{ $step['href'] }}" class="nova-link-tile">
+                        <div class="flex items-start gap-3">
+                            <span @class([
+                                'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold uppercase tracking-wide',
+                                'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $step['tone'] === 'indigo',
+                                'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $step['tone'] === 'amber',
+                                'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $step['tone'] === 'rose',
+                                'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $step['tone'] === 'sky',
+                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $step['tone'] === 'emerald',
+                            ])>
+                                {{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $step['title'] }}</p>
+                                <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $step['description'] }}</p>
+                            </div>
+                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                                open
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
+
+        <x-filament.ui.panel
+            :tone="$demoReport['scenario_ok'] ? 'emerald' : 'amber'"
+            eyebrow="Demo Ops"
+            title="Reset And Validate The Demo"
+            :description="$demoReport['scenario_ok']
+                ? 'These commands keep the seeded walkthrough intact and prove the environment is healthy before someone touches the admin.'
+                : 'The seeded walkthrough no longer matches the product story. Use reset before the next demo.'"
+        >
+            <div class="grid gap-3 sm:grid-cols-2">
+                @foreach ($demoSignals as $signal)
+                    <div class="nova-mini-stat">
+                        <p class="nova-mini-stat-label">{{ $signal['label'] }}</p>
+                        <p class="nova-mini-stat-value text-base">{{ $signal['value'] }}</p>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                {{ $demoReport['scenario_ok']
+                    ? 'Seeded accounts, content states, and prompt baseline are present. Use demo-check to verify runtime before a live walkthrough, then demo-models when you want fresh generation.'
+                    : 'Seeded accounts or reference records are missing. Run demo-reset to restore the product walkthrough to a known-good state.' }}
+            </div>
+
+            <div class="mt-4 space-y-3">
+                @foreach ($demoOperations as $operation)
+                    <div class="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <div class="border-b border-slate-200 bg-slate-950 px-4 py-3 text-sm font-medium text-slate-50 dark:border-slate-700">
+                            <code>{{ $operation['command'] }}</code>
+                        </div>
+                        <div class="px-4 py-3">
+                            <p class="text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $operation['description'] }}</p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+        <x-filament.ui.panel
+            eyebrow="Operating Signals"
+            title="Read The System Before Acting"
+            description="These three signals compress content operations, runtime pressure, and AI governance into the quickest possible scan."
+        >
+            <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
+                @foreach ($operatingSignals as $signal)
+                    <a href="{{ $signal['href'] }}" class="nova-link-tile">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">{{ $signal['title'] }}</p>
+                                <p class="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{{ $signal['value'] }}</p>
+                                <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{{ $signal['description'] }}</p>
+                            </div>
+                            <span @class([
+                                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $signal['tone'] === 'indigo',
+                                'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $signal['tone'] === 'amber',
+                                'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $signal['tone'] === 'rose',
+                                'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $signal['tone'] === 'sky',
+                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $signal['tone'] === 'emerald',
+                            ])>
+                                view
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
+
+        <x-filament.ui.panel
+            tone="sky"
+            eyebrow="Command Deck"
+            title="Move Through The Panel"
+            description="Use these routes once the dashboard tells you whether the next constraint sits in content, delivery, or runtime."
+        >
+            <div class="grid gap-3 md:grid-cols-2">
+                @foreach ($quickLinks as $link)
+                    <a href="{{ $link['href'] }}" class="nova-link-tile">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $link['label'] }}</p>
+                                <p class="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $link['description'] }}</p>
+                            </div>
+                            <span @class([
+                                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $link['tone'] === 'indigo',
+                                'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $link['tone'] === 'amber',
+                                'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $link['tone'] === 'rose',
+                                'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $link['tone'] === 'sky',
+                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $link['tone'] === 'emerald',
+                            ])>
+                                open
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
+    </section>
+
     <section class="grid gap-6 xl:grid-cols-3">
         @foreach ($workflowLanes as $lane)
             <x-filament.ui.panel
@@ -116,7 +252,7 @@
         <x-filament.ui.panel
             eyebrow="Needs Attention"
             title="What To Triage Next"
-            description="Use this as the first stop before diving into content or runtime details."
+            description="Use this as the first stop before diving into content, AI summarization, or runtime details."
         >
             <div class="grid gap-3 md:grid-cols-2">
                 @foreach ($attentionItems as $item)
@@ -172,7 +308,7 @@
         <x-filament.ui.panel
             eyebrow="Recent Content"
             title="Latest Workspace Activity"
-            description="Recent records that changed and may need review, AI refresh, or publication attention."
+            description="Recent records that changed and may need review, AI refresh, or headless delivery attention."
         >
             <div class="space-y-3">
                 @forelse ($recentContent as $item)
@@ -213,7 +349,7 @@
             tone="sky"
             eyebrow="Recent AI Events"
             title="Generation Feed"
-            description="Latest summary events across the workspace."
+            description="Latest AI summarization events across the workspace."
         >
             <div class="space-y-3">
                 @forelse ($recentEvents as $event)
@@ -246,33 +382,4 @@
             </div>
         </x-filament.ui.panel>
     </section>
-
-    <x-filament.ui.panel
-        tone="sky"
-        eyebrow="Quick Links"
-        title="Move Through The Panel"
-    >
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            @foreach ($quickLinks as $link)
-                <a href="{{ $link['href'] }}" class="nova-link-tile">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $link['label'] }}</p>
-                            <p class="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $link['description'] }}</p>
-                        </div>
-                        <span @class([
-                            'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
-                            'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200' => $link['tone'] === 'indigo',
-                            'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $link['tone'] === 'amber',
-                            'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $link['tone'] === 'rose',
-                            'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $link['tone'] === 'sky',
-                            'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $link['tone'] === 'emerald',
-                        ])>
-                            open
-                        </span>
-                    </div>
-                </a>
-            @endforeach
-        </div>
-    </x-filament.ui.panel>
 </div>

@@ -2,8 +2,8 @@
     <x-filament.ui.hero
         tone="sky"
         eyebrow="Prompt Registry"
-        title="Versioned Prompt Workspace"
-        description="Manage prompt families, keep one active production variant per name, and compare versions before changing the live contract."
+        title="Prompt Governance Workspace"
+        description="Manage prompt families, keep one active production variant per name, and compare versions before changing the live AI summarization contract."
     >
         <x-slot:aside>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operator Rules</p>
@@ -45,7 +45,7 @@
         <x-filament.ui.metric-card
             label="Active"
             :value="$activePrompts"
-            description="Currently live versions used by the pipeline."
+            description="Currently live versions used by the AI summarization pipeline."
             tone="emerald"
         />
         <x-filament.ui.metric-card
@@ -92,7 +92,7 @@
         <x-filament.ui.panel
             eyebrow="Recent Changes"
             title="Latest Registry Activity"
-            description="Use this as a quick release log before opening compare mode."
+            description="Use this as a quick release log before changing the live AI contract."
         >
             <div class="space-y-3">
                 @forelse ($recentChanges as $item)

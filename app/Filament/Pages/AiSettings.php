@@ -23,6 +23,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Str;
 
 class AiSettings extends Page
 {
@@ -59,7 +60,7 @@ class AiSettings extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Configure provider defaults and API credentials used by AI summary generation.';
+        return 'Configure the AI runtime baseline used for summarization, generation, and fallback delivery paths.';
     }
 
     public function mount(): void
@@ -85,7 +86,7 @@ class AiSettings extends Page
             ->columns(3)
             ->components([
                 Section::make('Generation defaults')
-                    ->description('Applied when no provider or model is explicitly selected from a generation action.')
+                    ->description('Applied when no provider or model is explicitly selected from an AI summarization action.')
                     ->columnSpan(1)
                     ->schema([
                         Select::make('default_provider')
@@ -153,7 +154,7 @@ class AiSettings extends Page
                     ->schema([
                         Placeholder::make('usage_notes')
                             ->hiddenLabel()
-                            ->content('Values saved here override .env defaults at runtime. Use Generate summary actions in Content pages to choose provider and model per request, while this page defines the stable operating baseline.'),
+                            ->content('Values saved here override .env defaults at runtime. Use Generate summary actions in Content pages to choose provider and model per request, while this page defines the stable AI baseline for the headless CMS.'),
                     ]),
             ]);
     }
@@ -242,6 +243,16 @@ class AiSettings extends Page
             'runtimeAlertsCount' => $runtimeAlertsCount,
             'failedChecks' => $failedChecks,
             'warningChecks' => $warningChecks,
+            'runtimeChecks' => $checks
+                ->map(fn (array $check): array => [
+                    'label' => Str::headline((string) ($check['component'] ?? 'Runtime')),
+                    'status' => (string) ($check['status'] ?? 'warn'),
+                    'status_label' => $this->statusLabel((string) ($check['status'] ?? 'warn')),
+                    'tone' => $this->statusTone((string) ($check['status'] ?? 'warn')),
+                    'message' => (string) ($check['message'] ?? 'No additional runtime detail.'),
+                ])
+                ->values()
+                ->all(),
             'providerCards' => [
                 [
                     'label' => 'Ollama (local)',

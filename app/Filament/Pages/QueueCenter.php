@@ -49,7 +49,7 @@ class QueueCenter extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Monitor summary queue and cancel queued runs before processing.';
+        return 'Monitor the AI summarization queue and cancel queued runs before worker time is wasted.';
     }
 
     public function getMaxContentWidth(): Width|string|null

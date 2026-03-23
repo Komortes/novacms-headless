@@ -2,6 +2,32 @@
 
 NovaCMS exposes a schema-first GraphQL API at `/graphql`.
 
+## Demo Quickstart
+
+If the Docker demo is already running, the fastest way to prove the headless story is:
+
+```bash
+make demo
+make demo-token
+```
+
+That prints a read-only bearer token for `admin@novacms.test` with `graphql:read-internal`.
+
+Minimal request:
+
+```bash
+curl http://localhost:8000/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer nova_xxx.yyy" \
+  -d '{"query":"query { contents(first: 5, locale: \"en\") { data { id slug title status } } }"}'
+```
+
+What this proves:
+
+- seeded content is ready for API consumers immediately
+- the admin can issue delivery tokens without leaving the product
+- a frontend or integration can read AI-enriched content through GraphQL
+
 ## Access Model
 
 - Public clients can read published content and run semantic search against published records only.
@@ -31,6 +57,12 @@ Bearer token auth:
 php artisan api-token:create test@example.com external-client --ability=graphql:write --ability=graphql:read-internal
 php artisan api-token:list test@example.com
 php artisan api-token:revoke 1
+```
+
+For the packaged Docker demo, you can also use:
+
+```bash
+make demo-token
 ```
 
 Example header:

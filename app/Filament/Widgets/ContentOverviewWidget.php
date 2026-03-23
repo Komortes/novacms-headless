@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\ContentStatus;
 use App\Enums\SummaryStatus;
 use App\Filament\Pages\AiSettings;
+use App\Filament\Pages\ApiAccess;
 use App\Filament\Pages\QueueCenter;
 use App\Filament\Pages\SystemHealth;
 use App\Filament\Resources\Contents\ContentResource;
@@ -13,6 +14,7 @@ use App\Models\Content;
 use App\Models\ContentAiSummary;
 use App\Models\ContentAiSummaryEvent;
 use App\Models\Prompt;
+use App\Services\DemoWorkspaceService;
 use App\Services\RuntimeHealthService;
 use App\Support\AdminPanelAccess;
 use Filament\Widgets\Widget;
@@ -93,6 +95,7 @@ class ContentOverviewWidget extends Widget
                 'href' => $event->content ? ContentResource::getUrl('view', ['record' => $event->content]) : null,
             ])
             ->all();
+        $demoReport = app(DemoWorkspaceService::class)->report(withRuntime: false);
 
         return [
             'totalContent' => $totalContent,
@@ -109,6 +112,19 @@ class ContentOverviewWidget extends Widget
             'roleLabel' => AdminPanelAccess::user()?->roleLabel() ?? 'Workspace',
             'roleFocus' => $this->roleFocus(),
             'quickLinks' => $this->quickLinks(),
+            'demoReport' => $demoReport,
+            'demoWalkthrough' => $this->demoWalkthrough(),
+            'demoSignals' => $this->demoSignals($demoReport),
+            'demoOperations' => $this->demoOperations(),
+            'operatingSignals' => $this->operatingSignals(
+                publishedContent: $publishedContent,
+                reviewReadyCount: $reviewReadyCount,
+                missingSummaryCount: $missingSummaryCount,
+                pendingSummaries: $pendingSummaries,
+                failedSummaries: $failedSummaries,
+                alertsCount: $alertsCount,
+                activePrompts: $activePrompts,
+            ),
             'workflowLanes' => $this->workflowLanes(
                 draftContent: $draftContent,
                 publishedContent: $publishedContent,
@@ -136,9 +152,9 @@ class ContentOverviewWidget extends Widget
         $user = AdminPanelAccess::user();
 
         return match (true) {
-            $user?->canManageApiAccess() => 'Own the operating baseline: prompts, providers, tokens, secrets, and recovery paths.',
-            $user?->canAccessQueueOperations() => 'Prioritize queue lag, failed runs, and runtime health before retrying content.',
-            default => 'Keep drafts clean, validate AI output, and publish only after the quality gate is satisfied.',
+            $user?->canManageApiAccess() => 'Own the headless CMS operating baseline: prompts, providers, tokens, secrets, and recovery paths.',
+            $user?->canAccessQueueOperations() => 'Protect AI summarization throughput before editors retry content or delivery flows.',
+            default => 'Move markdown content through review, validate AI summaries, and publish only when headless delivery is ready.',
         };
     }
 
@@ -150,37 +166,269 @@ class ContentOverviewWidget extends Widget
         $links = [
             [
                 'label' => 'Content Workspace',
-                'description' => 'Open editorial flow, list filters, and generation actions.',
+                'description' => 'Open content operations, AI summarization status, and editorial actions.',
                 'href' => ContentResource::getUrl('index'),
                 'tone' => 'indigo',
             ],
             AdminPanelAccess::canAccessQueueOperations() ? [
                 'label' => 'Queue Center',
-                'description' => 'Inspect pending, generating, and failed summary work.',
+                'description' => 'Inspect pending, generating, and failed AI summarization work.',
                 'href' => QueueCenter::getUrl(),
                 'tone' => 'amber',
             ] : null,
             AdminPanelAccess::canAccessQueueOperations() ? [
                 'label' => 'System Health',
-                'description' => 'Check Redis, Horizon, Reverb, Ollama, and queue alerts.',
+                'description' => 'Check the headless CMS runtime: Postgres, Redis, Horizon, Reverb, and Ollama.',
                 'href' => SystemHealth::getUrl(),
                 'tone' => 'rose',
             ] : null,
             AdminPanelAccess::canManagePrompts() ? [
                 'label' => 'Prompt Registry',
-                'description' => 'Manage active prompt contracts and compare versions.',
+                'description' => 'Manage prompt governance for AI summarization and compare live contracts.',
                 'href' => PromptResource::getUrl('index'),
                 'tone' => 'sky',
             ] : null,
             AdminPanelAccess::canManageAiSettings() ? [
                 'label' => 'AI Settings',
-                'description' => 'Tune provider defaults, models, timeouts, and API keys.',
+                'description' => 'Tune the AI runtime baseline: providers, models, timeouts, and fallback keys.',
                 'href' => AiSettings::getUrl(),
                 'tone' => 'emerald',
             ] : null,
         ];
 
         return array_values(array_filter($links));
+    }
+
+    /**
+     * @return list<array{title: string, description: string, href: string, tone: string}>
+     */
+    private function demoWalkthrough(): array
+    {
+        $readyContent = Content::query()
+            ->whereHas('summary', fn ($query) => $query->where('status', SummaryStatus::READY->value))
+            ->orderByDesc('updated_at')
+            ->first();
+        $draftContent = Content::query()
+            ->where('status', ContentStatus::DRAFT->value)
+            ->orderByDesc('updated_at')
+            ->first();
+        $failedContent = Content::query()
+            ->whereHas('summary', fn ($query) => $query->where('status', SummaryStatus::FAILED->value))
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if (AdminPanelAccess::canManageApiAccess()) {
+            return [
+                [
+                    'title' => 'Open the content workspace',
+                    'description' => 'Start with the seeded records so the editorial, ready, and failed AI states are visible immediately.',
+                    'href' => ContentResource::getUrl('index'),
+                    'tone' => 'indigo',
+                ],
+                [
+                    'title' => 'Review a ready article',
+                    'description' => 'Open a published record with TL;DR, bullets, FAQ, and tags already generated.',
+                    'href' => $this->contentViewUrl($readyContent),
+                    'tone' => 'emerald',
+                ],
+                [
+                    'title' => 'Inspect the failed draft',
+                    'description' => 'Use the seeded failed item to explain retries, queue visibility, and operator handoff.',
+                    'href' => $failedContent ? $this->contentViewUrl($failedContent) : QueueCenter::getUrl(),
+                    'tone' => 'amber',
+                ],
+                [
+                    'title' => 'Issue a GraphQL token',
+                    'description' => 'Open API Access and create a token so the headless delivery story is not theoretical.',
+                    'href' => ApiAccess::getUrl(),
+                    'tone' => 'sky',
+                ],
+            ];
+        }
+
+        if (AdminPanelAccess::canAccessQueueOperations() && ! AdminPanelAccess::canCreateContent()) {
+            return [
+                [
+                    'title' => 'Open queue center',
+                    'description' => 'Start from the runtime lane and show where pending, generating, and failed work accumulates.',
+                    'href' => QueueCenter::getUrl(),
+                    'tone' => 'amber',
+                ],
+                [
+                    'title' => 'Inspect the failed draft',
+                    'description' => 'Read the failed item in context so operators can tie queue errors back to real content.',
+                    'href' => $this->contentViewUrl($failedContent),
+                    'tone' => 'rose',
+                ],
+                [
+                    'title' => 'Check system health',
+                    'description' => 'Validate Redis, Horizon, Reverb, and Ollama before asking for retries.',
+                    'href' => SystemHealth::getUrl(),
+                    'tone' => 'sky',
+                ],
+            ];
+        }
+
+        return [
+            [
+                'title' => 'Open the content workspace',
+                'description' => 'Use the seeded bundle to explain draft, published, and AI status lanes without creating anything first.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => 'indigo',
+            ],
+            [
+                'title' => 'Review a ready article',
+                'description' => 'Open a record with usable AI output and show how summaries support editorial decisions.',
+                'href' => $this->contentViewUrl($readyContent),
+                'tone' => 'emerald',
+            ],
+            [
+                'title' => 'Edit the draft example',
+                'description' => 'Use the draft record to explain how content moves toward publication after review.',
+                'href' => $this->contentEditUrl($draftContent),
+                'tone' => 'amber',
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     summary: array{
+     *         demo_users_found: int,
+     *         demo_users_expected: int,
+     *         content: int,
+     *         published: int,
+     *         drafts: int,
+     *         ready_summaries: int,
+     *         failed_summaries: int,
+     *         active_prompts: int
+     *     }
+     * }  $demoReport
+     * @return list<array{label: string, value: string, tone: string}>
+     */
+    private function demoSignals(array $demoReport): array
+    {
+        $summary = $demoReport['summary'];
+
+        return [
+            [
+                'label' => 'Demo users',
+                'value' => $summary['demo_users_found'].'/'.$summary['demo_users_expected'],
+                'tone' => $summary['demo_users_found'] === $summary['demo_users_expected'] ? 'emerald' : 'rose',
+            ],
+            [
+                'label' => 'Seeded content',
+                'value' => $summary['content'].' records',
+                'tone' => $summary['content'] >= 4 ? 'indigo' : 'rose',
+            ],
+            [
+                'label' => 'Published / Draft',
+                'value' => $summary['published'].' / '.$summary['drafts'],
+                'tone' => ($summary['published'] > 0 && $summary['drafts'] > 0) ? 'sky' : 'rose',
+            ],
+            [
+                'label' => 'AI seed state',
+                'value' => $summary['ready_summaries'].' ready · '.$summary['failed_summaries'].' failed',
+                'tone' => ($summary['ready_summaries'] > 0 && $summary['failed_summaries'] > 0) ? 'amber' : 'rose',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{command: string, description: string, tone: string}>
+     */
+    private function demoOperations(): array
+    {
+        return [
+            [
+                'command' => 'make demo-check',
+                'description' => 'Validate runtime sockets plus the seeded users, content states, and active prompt baseline before a walkthrough. Missing live models are reported without blocking the seeded demo.',
+                'tone' => 'emerald',
+            ],
+            [
+                'command' => 'make demo-reset',
+                'description' => 'Restore the reference dataset so the published examples and failed draft are back in their expected state.',
+                'tone' => 'amber',
+            ],
+            [
+                'command' => 'make demo-models',
+                'description' => 'Pull local Ollama models only when you want to run fresh generation after the seeded walkthrough.',
+                'tone' => 'sky',
+            ],
+            [
+                'command' => 'make demo-token',
+                'description' => 'Print a read-only GraphQL token so a frontend consumer or API client can query the seeded content immediately.',
+                'tone' => 'emerald',
+            ],
+            [
+                'command' => 'make demo-logs',
+                'description' => 'Tail the Docker demo stack when startup, queue processing, or runtime services need inspection.',
+                'tone' => 'indigo',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{title: string, value: string|int, description: string, href: string, tone: string}>
+     */
+    private function operatingSignals(
+        int $publishedContent,
+        int $reviewReadyCount,
+        int $missingSummaryCount,
+        int $pendingSummaries,
+        int $failedSummaries,
+        int $alertsCount,
+        int $activePrompts,
+    ): array {
+        $editorialValue = match (true) {
+            $reviewReadyCount > 0 => $reviewReadyCount.' ready',
+            $missingSummaryCount > 0 => $missingSummaryCount.' missing AI',
+            default => 'calm',
+        };
+
+        $runtimeValue = match (true) {
+            $alertsCount > 0 => $alertsCount.' alerts',
+            $failedSummaries > 0 => $failedSummaries.' failed',
+            $pendingSummaries > 0 => $pendingSummaries.' in flight',
+            default => 'stable',
+        };
+
+        $governanceValue = match (true) {
+            AdminPanelAccess::canManagePrompts() || AdminPanelAccess::canManageAiSettings() => $activePrompts.' active',
+            default => $publishedContent.' live',
+        };
+
+        return [
+            [
+                'title' => 'Editorial readiness',
+                'value' => $editorialValue,
+                'description' => $reviewReadyCount > 0
+                    ? 'Drafts already have AI summary material and are ready for human review.'
+                    : 'Start with missing summaries before expecting a clean editorial lane.',
+                'href' => ContentResource::getUrl('index'),
+                'tone' => $reviewReadyCount > 0 ? 'emerald' : 'amber',
+            ],
+            [
+                'title' => 'Runtime posture',
+                'value' => $runtimeValue,
+                'description' => $alertsCount > 0 || $failedSummaries > 0
+                    ? 'Check queue and runtime health before retrying records or blaming content.'
+                    : 'The AI summarization pipeline is stable enough for normal content operations.',
+                'href' => AdminPanelAccess::canAccessQueueOperations() ? QueueCenter::getUrl() : ContentResource::getUrl('index'),
+                'tone' => $alertsCount > 0 || $failedSummaries > 0 ? 'rose' : ($pendingSummaries > 0 ? 'sky' : 'emerald'),
+            ],
+            [
+                'title' => 'Baseline contract',
+                'value' => $governanceValue,
+                'description' => AdminPanelAccess::canManagePrompts() || AdminPanelAccess::canManageAiSettings()
+                    ? 'Prompt governance and provider defaults define the production AI contract.'
+                    : 'Your role consumes the AI baseline through review rather than changing it.',
+                'href' => AdminPanelAccess::canManagePrompts()
+                    ? PromptResource::getUrl('index')
+                    : (AdminPanelAccess::canManageAiSettings() ? AiSettings::getUrl() : ContentResource::getUrl('index')),
+                'tone' => AdminPanelAccess::canManagePrompts() || AdminPanelAccess::canManageAiSettings() ? 'sky' : 'indigo',
+            ],
+        ];
     }
 
     /**
@@ -200,7 +448,7 @@ class ContentOverviewWidget extends Widget
             [
                 'eyebrow' => 'Editorial lane',
                 'title' => 'Move drafts toward publish',
-                'description' => 'Keep review-ready content moving while identifying which records still need first-run generation.',
+                'description' => 'Move markdown content toward headless delivery while identifying which records still need first-run AI summarization.',
                 'href' => ContentResource::getUrl('index'),
                 'tone' => 'indigo',
                 'cta' => 'Open content workspace',
@@ -238,7 +486,7 @@ class ContentOverviewWidget extends Widget
             (AdminPanelAccess::canManagePrompts() || AdminPanelAccess::canManageAiSettings()) ? [
                 'eyebrow' => 'Governance lane',
                 'title' => 'Protect the operating baseline',
-                'description' => 'Prompt contracts and provider defaults shape output quality more than one-off retries.',
+                'description' => 'Prompt governance and provider defaults shape AI summarization quality more than one-off retries.',
                 'href' => AdminPanelAccess::canManagePrompts() ? PromptResource::getUrl('index') : AiSettings::getUrl(),
                 'tone' => 'sky',
                 'cta' => AdminPanelAccess::canManagePrompts() ? 'Open prompt registry' : 'Open AI settings',
@@ -250,7 +498,7 @@ class ContentOverviewWidget extends Widget
             ] : [
                 'eyebrow' => 'Quality lane',
                 'title' => 'Use AI output as draft material',
-                'description' => 'Editors should treat generated summaries, bullets, and FAQ blocks as inputs to review, not final truth.',
+                'description' => 'Editors should treat generated summaries, bullets, and FAQ blocks as draft material for headless content, not final truth.',
                 'href' => ContentResource::getUrl('index'),
                 'tone' => 'emerald',
                 'cta' => 'Open review queue',
@@ -278,13 +526,13 @@ class ContentOverviewWidget extends Widget
         $items = [
             [
                 'title' => $reviewReadyCount > 0 ? $reviewReadyCount.' drafts are ready for review' : 'No review-ready drafts right now',
-                'description' => 'Use the content workspace to validate TL;DR, bullets, FAQ, and tags before publishing.',
+                'description' => 'Use the content workspace to validate TL;DR, bullets, FAQ, and tags before headless delivery.',
                 'href' => ContentResource::getUrl('index'),
                 'tone' => 'emerald',
             ],
             [
                 'title' => $pendingSummaries > 0 ? $pendingSummaries.' AI runs are still in flight' : 'Queue pressure is calm',
-                'description' => 'Pending and generating runs are easiest to understand from Queue Center.',
+                'description' => 'Pending and generating AI summarization runs are easiest to understand from Queue Center.',
                 'href' => AdminPanelAccess::canAccessQueueOperations() ? QueueCenter::getUrl() : ContentResource::getUrl('index'),
                 'tone' => 'sky',
             ],
@@ -305,5 +553,19 @@ class ContentOverviewWidget extends Widget
         ];
 
         return $items;
+    }
+
+    private function contentViewUrl(?Content $content): string
+    {
+        return $content
+            ? ContentResource::getUrl('view', ['record' => $content])
+            : ContentResource::getUrl('index');
+    }
+
+    private function contentEditUrl(?Content $content): string
+    {
+        return $content
+            ? ContentResource::getUrl('edit', ['record' => $content])
+            : ContentResource::getUrl('index');
     }
 }

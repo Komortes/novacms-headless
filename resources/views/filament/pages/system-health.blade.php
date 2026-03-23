@@ -10,7 +10,7 @@
             tone="sky"
             eyebrow="Runtime Control Surface"
             title="System Health"
-            description="Infrastructure checks for database, queue, websockets, and local AI runtime. Use this page to separate editor-side problems from environment-level failures before retrying jobs."
+            description="Infrastructure checks for the headless CMS runtime: database, queue, websockets, and local AI services. Use this page to separate editor-side problems from environment-level failures before retrying jobs."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operator Guide</p>

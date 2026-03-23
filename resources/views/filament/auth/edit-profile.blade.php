@@ -8,7 +8,7 @@
             tone="sky"
             eyebrow="Account"
             title="Profile Settings"
-            description="Manage your identity, password, and personal access posture inside the same admin shell you use for content and operations."
+            description="Manage your identity, password, and personal access posture inside the same headless CMS workspace you use for content and runtime operations."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Account Snapshot</p>
@@ -45,7 +45,7 @@
             <x-filament.ui.panel
                 eyebrow="Profile Form"
                 title="Update Account"
-                description="Personal changes here affect your own session and identity, not the platform-wide runtime baseline."
+                description="Personal changes here affect your own session and identity, not the platform-wide AI or delivery baseline."
             >
                 {{ $this->content }}
             </x-filament.ui.panel>
@@ -66,7 +66,7 @@
                         </div>
                         <div class="nova-signal-card">
                             <p class="nova-signal-card-title">Runtime operations stay elsewhere</p>
-                            <p class="nova-signal-card-copy">Use API Access, AI Settings, and Prompt Registry for platform controls, not this page.</p>
+                            <p class="nova-signal-card-copy">Use API Access, AI Settings, and Prompt Registry for delivery and AI platform controls, not this page.</p>
                         </div>
                     </div>
                 </x-filament.ui.panel>
@@ -81,7 +81,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <p class="text-sm font-semibold text-slate-950 dark:text-slate-100">Dashboard</p>
-                                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Return to the role-aware control room after updating your account.</p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Return to the role-aware headless CMS control surface after updating your account.</p>
                                 </div>
                                 <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200">
                                     open

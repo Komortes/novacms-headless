@@ -4,7 +4,7 @@
             tone="sky"
             eyebrow="Provider Control"
             title="AI Runtime Baseline"
-            description="Define the provider, model, and timeout defaults that shape content generation. This page should describe the runtime you actually expect editors and operators to trust."
+            description="Define the provider, model, and timeout defaults that shape AI summarization and content generation. This page should describe the runtime the headless CMS actually depends on."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operating Model</p>
@@ -98,6 +98,63 @@
             @endforeach
         </section>
 
+        <section class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <x-filament.ui.panel
+                eyebrow="Runtime Check Feed"
+                title="What The Platform Reports Right Now"
+                description="Use live checks to separate AI provider misconfiguration from queue or infrastructure pressure."
+            >
+                @if ($runtimeChecks === [])
+                    <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                        No runtime checks are available yet.
+                    </div>
+                @else
+                    <div class="grid gap-3 md:grid-cols-2">
+                        @foreach ($runtimeChecks as $check)
+                            <article class="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $check['label'] }}</p>
+                                        <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $check['message'] }}</p>
+                                    </div>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $check['tone'] === 'emerald',
+                                        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $check['tone'] === 'amber',
+                                        'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $check['tone'] === 'rose',
+                                    ])>
+                                        {{ $check['status_label'] }}
+                                    </span>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </x-filament.ui.panel>
+
+            <x-filament.ui.panel
+                tone="indigo"
+                eyebrow="Baseline Rules"
+                title="How To Read This Page"
+                description="Use the AI baseline as an operating contract, not a place for blind experiments."
+            >
+                <div class="space-y-3">
+                    <div class="nova-signal-card">
+                        <p class="nova-signal-card-title">Default route: {{ $defaultProvider }}</p>
+                        <p class="nova-signal-card-copy">This is the provider editors will inherit when they do not explicitly override provider or model from generation actions.</p>
+                    </div>
+                    <div class="nova-signal-card">
+                        <p class="nova-signal-card-title">Fallback posture: {{ $storedOpenAiKey ? 'external secret stored' : 'external secret missing' }}</p>
+                        <p class="nova-signal-card-copy">Keep the remote fallback ready before local quality, throughput, or latency pressure forces a fast change.</p>
+                    </div>
+                    <div class="nova-signal-card">
+                        <p class="nova-signal-card-title">Operator watch: {{ $failedChecks }} failed / {{ $warningChecks }} warning / {{ $runtimeAlertsCount }} alerts</p>
+                        <p class="nova-signal-card-copy">If runtime signals are already degraded, a provider switch alone is unlikely to fix the real bottleneck.</p>
+                    </div>
+                </div>
+            </x-filament.ui.panel>
+        </section>
+
         <section class="grid gap-6 xl:grid-cols-[1.55fr_0.85fr]">
             <div>
                 {{ $this->content }}
@@ -107,7 +164,7 @@
                 <x-filament.ui.panel
                     eyebrow="Profile Matrix"
                     title="Default Escalation Paths"
-                    description="Use these as a shared vocabulary for provider/model choices across the team."
+                    description="Use these as a shared vocabulary for provider and model choices across content and runtime teams."
                 >
                     <div class="space-y-3">
                         @foreach ($profiles as $profile)

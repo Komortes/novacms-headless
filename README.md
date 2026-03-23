@@ -5,8 +5,87 @@
 [![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
 [![License](https://img.shields.io/badge/License-MIT-0f766e.svg)](https://opensource.org/licenses/MIT)
 
-NovaCMS is an AI-powered headless CMS built on Laravel.  
-It stores and serves structured content through APIs and processes AI tasks asynchronously in the background.
+NovaCMS is a headless CMS with built-in AI summarization and content operations.  
+It gives content teams one product surface for structured content, async AI generation, prompt governance, and API delivery.
+
+## Product Positioning
+
+NovaCMS is not “just Laravel with a CMS table”.
+
+It is designed as:
+- a headless CMS for API-first content delivery
+- an editorial workspace for markdown content and AI-assisted review
+- an operations surface for queue state, failed runs, and runtime health
+- a prompt-governed AI layer where output contracts can be versioned and activated
+
+The default product story is:
+1. create or edit markdown content
+2. run AI summarization in the background
+3. review TL;DR, bullets, FAQ, tags, and meta description
+4. publish through a headless API for frontend consumers
+
+## Demo In 3 Minutes
+
+Run the full product demo in Docker:
+
+```bash
+make demo
+```
+
+Then open:
+- landing page: `http://localhost:8000`
+- admin: `http://localhost:8000/admin`
+- GraphQL endpoint: `http://localhost:8000/graphql`
+
+Seeded demo accounts:
+
+| Role | Email | Password | What to explore |
+|---|---|---|---|
+| Admin | `admin@novacms.test` | `password` | Full product view: content, prompts, AI settings, API access, runtime pages |
+| Editor | `editor@novacms.test` | `password` | Editorial workflow: drafts, AI review, publish path |
+| Operator | `operator@novacms.test` | `password` | Queue Center, System Health, runtime posture |
+
+The Docker demo ships with ready content and AI summaries so the UI is immediately usable.  
+If you want live local generation inside the demo, pull models after the stack is up:
+
+```bash
+make demo-models
+```
+
+Useful demo operations:
+
+```bash
+# validate runtime plus seeded users/content/prompt baseline
+make demo-check
+
+# rebuild the database and restore the demo story
+make demo-reset
+
+# print a read-only GraphQL token for demo consumers
+make demo-token
+
+# tail demo services when startup or runtime needs inspection
+make demo-logs
+```
+
+`make demo-check` validates the seeded walkthrough and runtime sockets.  
+`make demo-models` is only required when you want live Ollama generation inside the demo.
+
+Supporting demo assets:
+- walkthrough script: [docs/demo-script.md](/Users/oleksandrskoruk/projects/novacms-headless/docs/demo-script.md)
+- developer quickstart: [docs/graphql-api.md](/Users/oleksandrskoruk/projects/novacms-headless/docs/graphql-api.md)
+
+## What To Click First
+
+For a quick product walkthrough:
+
+1. open the landing page to understand the product story
+2. sign in as `admin@novacms.test`
+3. open `Content Workspace` and inspect the seeded published records and failed draft
+4. open `View Content` to see generated TL;DR, bullets, FAQ, tags, and editorial state together
+5. open `Prompt Registry` to see versioned prompt governance
+6. open `API Access` to issue a client token for GraphQL consumers
+7. open `AI Settings`, `Queue Center`, and `System Health` to see the runtime side of the product
 
 ## What NovaCMS Provides
 

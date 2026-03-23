@@ -4,7 +4,7 @@
             tone="slate"
             eyebrow="Secure Access"
             title="NovaCMS Admin"
-            description="Sign in to the control room for editorial operations, prompt governance, API access, and runtime oversight."
+            description="Sign in to the headless CMS control surface for content operations, AI summarization, prompt governance, API delivery, and runtime health."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Access Rules</p>
@@ -15,7 +15,7 @@
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                         <p class="font-semibold text-white">Treat AI output as operational data</p>
-                        <p class="mt-1 text-slate-300">Prompts, providers, queue state, and editorial status all belong to one workflow.</p>
+                        <p class="mt-1 text-slate-300">Prompts, providers, queue state, and editorial status all belong to one AI summarization workflow.</p>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                         <p class="font-semibold text-white">Enter through the dashboard</p>
@@ -40,7 +40,7 @@
         <x-filament.ui.panel
             eyebrow="Authentication"
             :title="$this->getHeading()"
-            description="Use your admin credentials to enter the workspace."
+            description="Use your admin credentials to enter the product workspace."
         >
             @if (filled($this->getSubheading()))
                 <div class="rounded-[1.2rem] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800/70 dark:bg-slate-900/55 dark:text-slate-300">
@@ -56,7 +56,7 @@
                 <div class="nova-mini-stat">
                     <p class="nova-mini-stat-label">Workspace</p>
                     <p class="nova-mini-stat-value text-base">Admin panel</p>
-                    <p class="nova-mini-stat-description">Content, prompts, tokens, and health live in one control surface.</p>
+                    <p class="nova-mini-stat-description">Content, AI summarization, prompt governance, tokens, and health live in one control surface.</p>
                 </div>
                 <div class="nova-mini-stat">
                     <p class="nova-mini-stat-label">Session model</p>

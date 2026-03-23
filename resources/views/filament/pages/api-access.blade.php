@@ -4,7 +4,7 @@
             tone="sky"
             eyebrow="External API Access"
             title="API Token Control"
-            description="Issue, review, and retire GraphQL bearer tokens without leaving the admin. Treat this page as the token registry, not just a create action."
+            description="Issue, review, and retire GraphQL bearer tokens without leaving the admin. Treat this page as the headless delivery registry, not just a create action."
         >
             <x-slot:aside>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Security Notes</p>
@@ -72,9 +72,83 @@
 
         <section class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <x-filament.ui.panel
+                eyebrow="Registry Lanes"
+                title="Read Token Risk By Segment"
+                description="These segments tell you which part of the headless delivery registry needs action first."
+            >
+                <div class="grid gap-3 md:grid-cols-2">
+                    @foreach ($registryLanes as $lane)
+                        <a href="{{ $lane['href'] }}" class="nova-link-tile">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $lane['label'] }}</p>
+                                    <p class="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ $lane['description'] }}</p>
+                                </div>
+                                <span @class([
+                                    'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' => $lane['tone'] === 'emerald',
+                                    'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' => $lane['tone'] === 'amber',
+                                    'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200' => $lane['tone'] === 'rose',
+                                    'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200' => $lane['tone'] === 'sky',
+                                ])>
+                                    {{ $lane['count'] }}
+                                </span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </x-filament.ui.panel>
+
+            <x-filament.ui.panel
+                tone="indigo"
+                eyebrow="Principal Coverage"
+                title="Who Owns Active Clients"
+                description="Use this to spot concentration, privilege hotspots, and stale ownership across frontend consumers and integrations."
+            >
+                @if ($principalSummaries === [])
+                    <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+                        No principals have issued tokens yet.
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach ($principalSummaries as $principal)
+                            <article class="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $principal['principal'] }}</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">last used {{ $principal['last_used'] }}</p>
+                                    </div>
+                                    <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200">
+                                        {{ $principal['total'] }} total
+                                    </span>
+                                </div>
+
+                                <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">Usable</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $principal['usable'] }}</p>
+                                    </div>
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">Privileged</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $principal['privileged'] }}</p>
+                                    </div>
+                                    <div class="nova-mini-stat">
+                                        <p class="nova-mini-stat-label">Ownership</p>
+                                        <p class="nova-mini-stat-value text-base">{{ $principal['total'] > 1 ? 'clustered' : 'single' }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </x-filament.ui.panel>
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <x-filament.ui.panel
                 eyebrow="Access Posture"
                 title="Recommended Ability Shapes"
-                description="Use these as the default contracts when issuing new tokens."
+                description="Use these as the default contracts when issuing tokens for headless delivery."
             >
                 <div class="grid gap-3">
                     @foreach ($abilityGuides as $guide)
@@ -101,7 +175,7 @@
                 tone="sky"
                 eyebrow="Client Bootstrap"
                 title="Smoke-Test New Tokens"
-                description="Issue the token, verify auth once, then hand it to the real client."
+                description="Issue the token, verify auth once, then hand it to the real frontend or integration."
             >
                 <div class="space-y-4">
                     @foreach ($clientSnippets as $snippet)
@@ -163,10 +237,19 @@
         <section class="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
             <div class="space-y-6">
                 <x-filament.ui.panel
-                    eyebrow="Lifecycle"
-                    title="Registry Posture"
+                    eyebrow="Rotation Discipline"
+                    title="How To Keep The Registry Safe"
                 >
-                    <div class="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-1">
+                    <div class="space-y-3">
+                        @foreach ($rotationRules as $rule)
+                            <div class="nova-signal-card">
+                                <p class="nova-signal-card-title">{{ $rule['title'] }}</p>
+                                <p class="nova-signal-card-copy">{{ $rule['description'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-1">
                         <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Revoked</p>
                             <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $revokedCount }}</p>
@@ -186,6 +269,7 @@
                 </x-filament.ui.panel>
 
                 <x-filament.ui.panel
+                    id="recent-usage"
                     eyebrow="Recent Usage"
                     title="Last Active Clients"
                     :badge="count($recentUsage) . ' recent'"
@@ -223,6 +307,7 @@
             </div>
 
             <x-filament.ui.panel
+                id="token-registry"
                 eyebrow="Registry"
                 title="Recent Tokens"
                 :badge="$tokenCount . ' total'"
