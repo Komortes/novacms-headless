@@ -5,33 +5,44 @@
 @source '../../../../resources/views/components/filament/**/*.blade.php';
 
 :root {
-    --nova-admin-bg: radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 24%), linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-    --nova-admin-surface-shadow: 0 24px 60px -36px rgba(15, 23, 42, 0.26);
-    --nova-admin-soft-shadow: 0 18px 44px -32px rgba(15, 23, 42, 0.18);
-    --nova-admin-border-light: rgba(255, 255, 255, 0.72);
-    --nova-admin-border-dark: rgba(255, 255, 255, 0.08);
+    --nova-bg: #f1f5f9;
+    --nova-surface: #ffffff;
+    --nova-border: #e2e8f0;
+    --nova-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.08);
+    --nova-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --nova-sidebar-bg: #0a0f1e;
 }
 
 .dark {
-    --nova-admin-bg: radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 20%), linear-gradient(180deg, #020617 0%, #020617 100%);
+    --nova-bg: #020617;
+    --nova-surface: #0f172a;
+    --nova-border: rgba(255, 255, 255, 0.08);
+    --nova-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --nova-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
 }
 
 @layer components {
+
+    /* ─── Layout ────────────────────────────────────────────────── */
+
     .fi-layout,
     .fi-main {
-        background: var(--nova-admin-bg);
+        background: var(--nova-bg);
     }
 
     .fi-main-ctn {
         @apply px-4 pb-10 pt-4 sm:px-6 lg:px-8;
     }
 
+    /* Fix: was gap-6 space-y-6 (double spacing) */
     .fi-page,
     .fi-page-header-main-ctn,
     .fi-page-main,
     .fi-page-content {
-        @apply gap-6 space-y-6;
+        @apply gap-6;
     }
+
+    /* ─── Surface cards ─────────────────────────────────────────── */
 
     .fi-header,
     .fi-page-sub-navigation-tabs,
@@ -39,52 +50,45 @@
     .fi-section,
     .fi-wi-widget,
     .fi-modal-window {
-        @apply border bg-white/78 backdrop-blur-xl dark:bg-slate-950/60;
-        border-color: var(--nova-admin-border-light);
-        box-shadow: var(--nova-admin-soft-shadow);
-    }
-
-    .dark .fi-header,
-    .dark .fi-page-sub-navigation-tabs,
-    .dark .fi-ta-ctn,
-    .dark .fi-section,
-    .dark .fi-wi-widget,
-    .dark .fi-modal-window {
-        border-color: var(--nova-admin-border-dark);
+        @apply border bg-white dark:bg-slate-900/95;
+        border-color: var(--nova-border);
+        box-shadow: var(--nova-shadow-sm);
     }
 
     .fi-header {
-        @apply rounded-[1.75rem] px-6 py-6;
-        box-shadow: var(--nova-admin-surface-shadow);
+        @apply rounded-2xl px-6 py-5;
+        box-shadow: var(--nova-shadow);
     }
 
+    /* ─── Sidebar ────────────────────────────────────────────────── */
+
     .fi-sidebar {
-        @apply border-r border-white/10 bg-slate-950/88 backdrop-blur-2xl;
-        box-shadow: 24px 0 54px -34px rgba(2, 6, 23, 0.75);
+        @apply border-r border-white/[0.07] bg-[#0a0f1e];
+        box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
     }
 
     .fi-sidebar-header-ctn,
     .fi-sidebar-footer {
-        @apply border-white/10;
+        @apply border-white/[0.07];
     }
 
     .fi-sidebar-header,
     .fi-topbar {
-        @apply border-white/10;
+        @apply border-white/[0.07];
     }
 
     .fi-sidebar-nav {
-        @apply px-3 pb-5;
+        @apply px-2.5 pb-5;
     }
 
     .fi-sidebar-nav-groups,
     .fi-sidebar-group-items,
     .fi-sidebar-sub-group-items {
-        @apply space-y-1.5;
+        @apply space-y-0.5;
     }
 
     .fi-sidebar-group-btn {
-        @apply rounded-[1rem] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200;
+        @apply rounded-lg px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:bg-white/[0.04] hover:text-slate-400;
     }
 
     .fi-sidebar-group-label,
@@ -93,46 +97,63 @@
     }
 
     .fi-sidebar-item-btn {
-        @apply rounded-[1rem] px-3 py-3 text-slate-300 transition duration-150;
+        @apply rounded-lg px-3 py-2.5 text-slate-400 transition duration-150;
     }
 
     .fi-sidebar-item-icon {
-        @apply text-slate-500 transition duration-150;
+        @apply text-slate-600 transition duration-150;
     }
 
     .fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:hover {
-        @apply bg-white/[0.06] text-white;
+        @apply bg-white/[0.05] text-slate-200;
     }
 
     .fi-sidebar-item:not(.fi-active) > .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
-        @apply text-slate-200;
+        @apply text-slate-400;
     }
 
     .fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
     .fi-sidebar-item.fi-sidebar-item-has-active-child-items > .fi-sidebar-item-btn {
-        @apply bg-white/[0.09] text-white ring-1 ring-white/10;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        @apply bg-white/[0.08] text-white ring-1 ring-white/[0.08];
     }
 
     .fi-sidebar-item.fi-active .fi-sidebar-item-icon,
     .fi-sidebar-item.fi-sidebar-item-has-active-child-items .fi-sidebar-item-icon {
-        @apply text-sky-200;
+        @apply text-amber-400;
     }
 
     .fi-user-menu-trigger {
-        @apply flex w-full items-center gap-3 rounded-[1rem] border border-white/10 bg-white/[0.04] px-3 py-3 text-left text-slate-200 transition hover:bg-white/[0.08];
+        @apply flex w-full items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2.5 text-left text-slate-400 transition hover:bg-white/[0.07] hover:text-slate-200;
     }
 
     .fi-user-menu-trigger-text {
         @apply text-sm font-medium;
     }
 
+    /* ─── Topbar ─────────────────────────────────────────────────── */
+
     .fi-topbar-ctn {
         @apply sticky top-0 z-30 px-4 pt-4 sm:px-6 lg:px-8;
     }
 
+    .fi-topbar {
+        @apply rounded-xl border bg-white px-4 py-2.5 dark:bg-slate-900/95;
+        border-color: var(--nova-border);
+        box-shadow: var(--nova-shadow-sm);
+    }
+
+    .fi-topbar-item-btn {
+        @apply rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.05] dark:hover:text-white;
+    }
+
+    .fi-topbar-item.fi-active .fi-topbar-item-btn {
+        @apply bg-slate-950 text-white dark:bg-white dark:text-slate-950;
+    }
+
+    /* ─── Simple layout (auth pages) ────────────────────────────── */
+
     .fi-simple-layout {
-        background: var(--nova-admin-bg);
+        background: var(--nova-bg);
     }
 
     .fi-simple-layout-header {
@@ -140,7 +161,7 @@
     }
 
     .fi-simple-main-ctn {
-        @apply px-4 py-6 sm:px-6 lg:px-8;
+        @apply px-4 py-8 sm:px-6 lg:px-8;
     }
 
     .fi-simple-main,
@@ -149,98 +170,88 @@
         @apply space-y-6;
     }
 
-    .fi-topbar {
-        @apply rounded-[1.25rem] border bg-white/74 px-4 py-3 backdrop-blur-xl dark:bg-slate-950/70;
-        border-color: var(--nova-admin-border-light);
-        box-shadow: var(--nova-admin-soft-shadow);
-    }
-
-    .dark .fi-topbar {
-        border-color: var(--nova-admin-border-dark);
-    }
-
-    .fi-topbar-item-btn {
-        @apply rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white;
-    }
-
-    .fi-topbar-item.fi-active .fi-topbar-item-btn {
-        @apply bg-slate-950 text-white dark:bg-white dark:text-slate-950;
-    }
+    /* ─── Page header ───────────────────────────────────────────── */
 
     .fi-header-heading {
-        @apply text-[clamp(1.7rem,1.25rem+1vw,2.45rem)] font-semibold tracking-tight text-slate-950 dark:text-slate-50;
+        @apply text-[clamp(1.4rem,1.1rem+0.85vw,2.1rem)] font-semibold tracking-tight text-slate-950 dark:text-slate-50;
     }
 
     .fi-header-subheading {
-        @apply mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+        @apply mt-1.5 max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400;
     }
 
     .fi-header-actions-ctn {
-        @apply items-start gap-2.5;
+        @apply items-start gap-2;
     }
 
     .fi-breadcrumbs {
-        @apply mb-3;
+        @apply mb-2;
     }
 
     .fi-breadcrumbs-item-label {
         @apply text-xs font-medium text-slate-500 dark:text-slate-400;
     }
 
+    /* ─── Sub-navigation tabs ───────────────────────────────────── */
+
     .fi-page-sub-navigation-tabs {
-        @apply rounded-[1.35rem] p-1.5;
+        @apply rounded-xl p-1;
     }
 
     .fi-tabs {
-        @apply gap-1;
+        @apply gap-0.5;
     }
 
     .fi-tabs-item {
-        @apply rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition duration-150 dark:text-slate-300;
+        @apply rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition duration-150 dark:text-slate-300;
     }
 
     .fi-tabs-item:hover {
-        @apply bg-slate-100/80 text-slate-950 dark:bg-white/5 dark:text-white;
+        @apply bg-slate-100 text-slate-950 dark:bg-white/[0.05] dark:text-white;
     }
 
     .fi-tabs-item.fi-active {
         @apply bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950;
     }
 
+    /* ─── Sections ──────────────────────────────────────────────── */
+
     .fi-section {
-        @apply overflow-hidden rounded-[1.6rem];
+        @apply overflow-hidden rounded-xl;
     }
 
     .fi-section-header {
-        @apply gap-4 border-b border-slate-200/70 px-6 py-5 dark:border-white/10;
+        @apply gap-4 border-b border-slate-100 px-6 py-4 dark:border-white/[0.07];
     }
 
     .fi-section-header-heading {
-        @apply text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100;
+        @apply text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-100;
     }
 
     .fi-section-header-description {
-        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400;
     }
 
     .fi-section-content {
-        @apply px-6 py-6;
+        @apply px-6 py-5;
     }
 
     .fi-sc-section .fi-section-content {
-        @apply space-y-6;
+        @apply space-y-5;
     }
 
     .fi-section-footer {
-        @apply border-t border-slate-200/70 px-6 py-4 dark:border-white/10;
+        @apply border-t border-slate-100 px-6 py-4 dark:border-white/[0.07];
     }
+
+    /* ─── Form fields ───────────────────────────────────────────── */
 
     .fi-fo-field {
         @apply gap-2;
     }
 
     .fi-fo-field-label {
-        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+        @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400;
     }
 
     .fi-fo-field-label-content {
@@ -262,8 +273,7 @@
     .fi-fo-code-editor,
     .fi-fo-key-value,
     .fi-fo-builder {
-        @apply rounded-[1rem] border border-slate-200 bg-white/90 shadow-sm transition duration-200 dark:border-slate-700 dark:bg-slate-950/70;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+        @apply rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 dark:border-slate-700 dark:bg-slate-900;
     }
 
     .fi-input-wrp:focus-within,
@@ -272,42 +282,44 @@
     .fi-fo-code-editor:focus-within,
     .fi-fo-key-value:focus-within,
     .fi-fo-builder:focus-within {
-        @apply border-sky-300 ring-4 ring-sky-100 dark:border-sky-500 dark:ring-sky-500/15;
+        @apply border-amber-400 ring-4 ring-amber-100 dark:border-amber-500 dark:ring-amber-500/15;
     }
 
     .fi-input,
     .fi-select-input {
-        @apply min-h-12 px-4 text-sm text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+        @apply min-h-10 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
     }
 
     .fi-input-wrp-label {
-        @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500;
+        @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500;
     }
 
     .fi-fo-textarea textarea {
-        @apply min-h-40 px-4 py-3 text-sm leading-7 text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+        @apply min-h-36 px-3.5 py-3 text-sm leading-7 text-slate-900 placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
     }
 
     .fi-fo-markdown-editor > div,
     .fi-fo-rich-editor-main,
     .fi-fo-code-editor > div {
-        @apply min-h-[24rem];
+        @apply min-h-[22rem];
     }
 
     .fi-fo-checkbox-list-option {
-        @apply rounded-[1rem] border border-slate-200/70 bg-white/75 px-4 py-3 shadow-sm transition hover:border-sky-200 hover:bg-sky-50/60 dark:border-slate-800 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
+        @apply rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-amber-300 hover:bg-amber-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-amber-600 dark:hover:bg-amber-950/10;
     }
 
     .fi-fo-checkbox-list-option-description {
         @apply mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400;
     }
 
+    /* ─── Infolist entries ──────────────────────────────────────── */
+
     .fi-in-entry {
-        @apply gap-3 rounded-[1.2rem] border border-slate-200/70 bg-slate-50/75 px-4 py-4 dark:border-slate-800/70 dark:bg-slate-900/60;
+        @apply gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60;
     }
 
     .fi-in-entry-label {
-        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+        @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400;
     }
 
     .fi-in-entry-content {
@@ -315,24 +327,26 @@
     }
 
     .fi-in-repeatable-item {
-        @apply rounded-[1.2rem] border border-slate-200/70 bg-white/80 p-4 dark:border-slate-800/70 dark:bg-slate-950/55;
+        @apply rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900;
     }
 
+    /* ─── Tables ────────────────────────────────────────────────── */
+
     .fi-ta-header {
-        @apply px-6 pt-6;
+        @apply px-6 pt-5;
     }
 
     .fi-ta-header-heading {
-        @apply text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100;
+        @apply text-base font-semibold tracking-tight text-slate-950 dark:text-slate-100;
     }
 
     .fi-ta-header-description {
-        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+        @apply mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400;
     }
 
     .fi-ta-header-toolbar,
     .fi-ta-content-header {
-        @apply border-t border-slate-200/70 px-6 py-4 dark:border-white/10;
+        @apply border-t border-slate-100 px-6 py-3 dark:border-white/[0.07];
     }
 
     .fi-ta-row {
@@ -340,7 +354,7 @@
     }
 
     .fi-ta-row.fi-selected {
-        @apply bg-slate-100/80 dark:bg-white/[0.05];
+        @apply bg-amber-50/60 dark:bg-amber-950/10;
     }
 
     .fi-ta-cell,
@@ -349,20 +363,24 @@
     }
 
     .fi-ta-cell-label {
-        @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500;
+        @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500;
     }
+
+    /* ─── Stats overview (built-in Filament widget) ─────────────── */
 
     .fi-wi-stats-overview-stat {
-        @apply rounded-[1.5rem] border border-white/70 bg-white/78 p-5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60;
-        box-shadow: var(--nova-admin-soft-shadow);
+        @apply rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900;
+        box-shadow: var(--nova-shadow-sm);
     }
 
+    /* ─── Nova custom utilities ─────────────────────────────────── */
+
     .nova-select {
-        @apply block w-full rounded-[1rem] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus:border-sky-300 focus:outline-none focus:ring-4 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-500/15;
+        @apply block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100;
     }
 
     .nova-code-block {
-        @apply max-h-[560px] overflow-auto rounded-[1.25rem] border border-white/10 bg-slate-950/95 p-4 text-xs leading-6 text-slate-100 shadow-inner;
+        @apply max-h-[560px] overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs leading-6 text-slate-100;
     }
 
     .nova-code-block code {
@@ -370,31 +388,31 @@
     }
 
     .nova-link-tile {
-        @apply block rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 dark:border-slate-800/70 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
+        @apply block rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm transition duration-150 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800/80;
     }
 
     .nova-empty-state {
-        @apply rounded-[1.3rem] border border-dashed border-slate-300/80 bg-slate-50/75 px-5 py-6 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300;
+        @apply rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400;
     }
 
     .nova-mini-stat {
-        @apply rounded-[1.1rem] border border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm dark:border-slate-800/70 dark:bg-slate-950/55;
+        @apply rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60;
     }
 
     .nova-mini-stat-label {
-        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+        @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
     }
 
     .nova-mini-stat-value {
-        @apply mt-1 text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50;
+        @apply mt-1 font-mono text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50;
     }
 
     .nova-mini-stat-description {
-        @apply mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300;
+        @apply mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400;
     }
 
     .nova-signal-card {
-        @apply rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-950/55;
+        @apply rounded-xl border border-slate-200 bg-white px-4 py-4 dark:border-slate-700 dark:bg-slate-800/50;
     }
 
     .nova-signal-card-title {
@@ -402,6 +420,10 @@
     }
 
     .nova-signal-card-copy {
-        @apply mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300;
+        @apply mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400;
+    }
+
+    .nova-inline-code {
+        @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300;
     }
 }
