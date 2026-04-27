@@ -49,23 +49,40 @@ class ApiTokenAuthenticator
 
     private function resolveToken(string $plainTextToken): ?ApiAccessToken
     {
-        if (! preg_match('/^nova_(\d+)\.([A-Za-z0-9]+)$/', trim($plainTextToken), $matches)) {
+        $secret = $this->extractTokenSecret($plainTextToken);
+
+        if ($secret === null) {
             return null;
         }
-
-        $tokenId = (int) $matches[1];
-        $secret = $matches[2];
 
         $token = ApiAccessToken::query()
             ->with('user')
-            ->find($tokenId);
+            ->where('token_hash', hash('sha256', $secret))
+            ->first();
 
-        if (! $token instanceof ApiAccessToken) {
+        return $token instanceof ApiAccessToken ? $token : null;
+    }
+
+    private function extractTokenSecret(string $plainTextToken): ?string
+    {
+        $token = trim($plainTextToken);
+
+        if (! str_starts_with($token, 'nova_')) {
             return null;
         }
 
-        return hash_equals($token->token_hash, hash('sha256', $secret))
-            ? $token
+        $payload = substr($token, 5);
+
+        if ($payload === '' || $payload === false) {
+            return null;
+        }
+
+        if (preg_match('/^\d+\.([A-Za-z0-9]{32,})$/', $payload, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return preg_match('/^[A-Za-z0-9]{32,}$/', $payload) === 1
+            ? $payload
             : null;
     }
 }

@@ -114,10 +114,7 @@ class QueueCenter extends Page
     }
 
     #[On('novacms-domain-event')]
-    public function refreshFromDomainEvent(): void
-    {
-        // Livewire will re-render this page after the listener invocation.
-    }
+    public function refreshFromDomainEvent(): void {}
 
     /**
      * @return array<string, mixed>

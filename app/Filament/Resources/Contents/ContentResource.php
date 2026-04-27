@@ -66,9 +66,7 @@ class ContentResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getWidgets(): array

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -158,7 +157,7 @@ class User extends Authenticatable implements FilamentUser
 
         return [
             'access_token' => $token,
-            'plain_text_token' => sprintf('nova_%d.%s', $token->id, $secret),
+            'plain_text_token' => 'nova_'.$secret,
         ];
     }
 }

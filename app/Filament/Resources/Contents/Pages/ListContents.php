@@ -340,8 +340,5 @@ class ListContents extends ListRecords
     }
 
     #[On('novacms-domain-event')]
-    public function refreshFromDomainEvent(): void
-    {
-        // Trigger a re-render when background domain events are received.
-    }
+    public function refreshFromDomainEvent(): void {}
 }

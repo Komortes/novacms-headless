@@ -18,7 +18,7 @@ Minimal request:
 ```bash
 curl http://localhost:8000/graphql \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer nova_xxx.yyy" \
+  -H "Authorization: Bearer nova_yourGeneratedSecret" \
   -d '{"query":"query { contents(first: 5, locale: \"en\") { data { id slug title status } } }"}'
 ```
 
@@ -49,7 +49,7 @@ Session auth:
 
 Bearer token auth:
 
-- Tokens are issued per user and returned once as `Bearer nova_<id>.<secret>`.
+- Tokens are issued per user and returned once as `Bearer nova_<secret>`.
 - Tokens are hashed at rest and support revocation and expiry.
 - Use CLI commands to manage them:
 
@@ -68,7 +68,7 @@ make demo-token
 Example header:
 
 ```http
-Authorization: Bearer nova_12.yourGeneratedSecret
+Authorization: Bearer nova_yourGeneratedSecret
 ```
 
 Token abilities:
