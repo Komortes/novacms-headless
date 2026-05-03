@@ -36,18 +36,14 @@
     $toneClass = $tones[$tone] ?? $tones['gray'];
 @endphp
 
-<article {{ $attributes->class(['relative overflow-hidden rounded-[1.5rem] border bg-white p-5 shadow-sm ring-1 ring-white/50 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.25)] dark:bg-gray-900 dark:ring-white/5', $toneClass['section']]) }}>
+<article {{ $attributes->class(['relative overflow-hidden rounded-[1rem] border bg-white px-4 py-3 shadow-sm ring-1 ring-white/50 transition duration-200 dark:bg-gray-900 dark:ring-white/5', $toneClass['section']]) }}>
     <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-white/0 via-white/70 to-white/0 opacity-70 dark:via-white/10"></div>
-    <div @class([
-        'absolute -right-6 -top-6 h-20 w-20 rounded-full blur-2xl',
-        $toneClass['soft'],
-    ])></div>
     <div class="relative">
         <p class="text-xs font-semibold uppercase tracking-wide text-current opacity-80">{{ $label }}</p>
-        <p class="mt-2 text-3xl font-semibold text-current">{{ $value }}</p>
+        <p class="mt-1 text-3xl font-semibold leading-none text-current">{{ $value }}</p>
 
         @if (filled($description))
-            <p class="mt-2 max-w-xs text-sm text-gray-600 dark:text-gray-300">{{ $description }}</p>
+            <p class="mt-2 truncate text-sm text-gray-600 dark:text-gray-300">{{ $description }}</p>
         @endif
     </div>
 </article>

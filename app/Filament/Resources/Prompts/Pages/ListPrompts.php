@@ -6,6 +6,7 @@ use App\Filament\Resources\Prompts\PromptResource;
 use App\Filament\Widgets\PromptWorkspaceWidget;
 use App\Services\PromptCatalogManager;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
@@ -33,82 +34,85 @@ class ListPrompts extends ListRecords
                 ->icon(Heroicon::ArrowsRightLeft)
                 ->color('gray')
                 ->url(PromptResource::getUrl('compare')),
-            Action::make('exportAll')
-                ->label('Export all')
-                ->icon(Heroicon::ArrowDownTray)
-                ->color('gray')
-                ->action(function () {
-                    $payload = app(PromptCatalogManager::class)->export();
+            ActionGroup::make([
+                Action::make('exportAll')
+                    ->label('Export all')
+                    ->icon(Heroicon::ArrowDownTray)
+                    ->action(function () {
+                        $payload = app(PromptCatalogManager::class)->export();
 
-                    return response()->streamDownload(
-                        function () use ($payload): void {
-                            echo json_encode(
-                                $payload,
-                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-                            );
-                        },
-                        'prompts-all-'.now()->format('Ymd-His').'.json',
-                        ['Content-Type' => 'application/json'],
-                    );
-                }),
-            Action::make('exportActive')
-                ->label('Export active')
-                ->icon(Heroicon::ArrowDownTray)
-                ->color('gray')
-                ->action(function () {
-                    $payload = app(PromptCatalogManager::class)->export(activeOnly: true);
-
-                    return response()->streamDownload(
-                        function () use ($payload): void {
-                            echo json_encode(
-                                $payload,
-                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-                            );
-                        },
-                        'prompts-active-'.now()->format('Ymd-His').'.json',
-                        ['Content-Type' => 'application/json'],
-                    );
-                }),
-            Action::make('importJson')
-                ->label('Import JSON')
-                ->icon(Heroicon::ArrowUpTray)
-                ->color('gray')
-                ->modalHeading('Import prompt versions')
-                ->modalSubmitActionLabel('Import')
-                ->modalWidth('5xl')
-                ->schema([
-                    Textarea::make('payload')
-                        ->label('JSON payload')
-                        ->rows(18)
-                        ->required()
-                        ->helperText('Supports exported bundle format or one prompt object.'),
-                    Toggle::make('activate_imported')
-                        ->label('Apply active flags from payload')
-                        ->default(true)
-                        ->inline(false),
-                ])
-                ->action(function (array $data): void {
-                    try {
-                        $result = app(PromptCatalogManager::class)->importFromJson(
-                            payload: (string) ($data['payload'] ?? ''),
-                            activateImported: (bool) ($data['activate_imported'] ?? true),
+                        return response()->streamDownload(
+                            function () use ($payload): void {
+                                echo json_encode(
+                                    $payload,
+                                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                                );
+                            },
+                            'prompts-all-'.now()->format('Ymd-His').'.json',
+                            ['Content-Type' => 'application/json'],
                         );
-                    } catch (Throwable $exception) {
+                    }),
+                Action::make('exportActive')
+                    ->label('Export active')
+                    ->icon(Heroicon::ArrowDownTray)
+                    ->action(function () {
+                        $payload = app(PromptCatalogManager::class)->export(activeOnly: true);
+
+                        return response()->streamDownload(
+                            function () use ($payload): void {
+                                echo json_encode(
+                                    $payload,
+                                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                                );
+                            },
+                            'prompts-active-'.now()->format('Ymd-His').'.json',
+                            ['Content-Type' => 'application/json'],
+                        );
+                    }),
+                Action::make('importJson')
+                    ->label('Import JSON')
+                    ->icon(Heroicon::ArrowUpTray)
+                    ->modalHeading('Import prompt versions')
+                    ->modalSubmitActionLabel('Import')
+                    ->modalWidth('5xl')
+                    ->schema([
+                        Textarea::make('payload')
+                            ->label('JSON payload')
+                            ->rows(18)
+                            ->required()
+                            ->helperText('Supports exported bundle format or one prompt object.'),
+                        Toggle::make('activate_imported')
+                            ->label('Apply active flags from payload')
+                            ->default(true)
+                            ->inline(false),
+                    ])
+                    ->action(function (array $data): void {
+                        try {
+                            $result = app(PromptCatalogManager::class)->importFromJson(
+                                payload: (string) ($data['payload'] ?? ''),
+                                activateImported: (bool) ($data['activate_imported'] ?? true),
+                            );
+                        } catch (Throwable $exception) {
+                            Notification::make()
+                                ->title('Import failed')
+                                ->body(Str::limit($exception->getMessage(), 220))
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
                         Notification::make()
-                            ->title('Import failed')
-                            ->body(Str::limit($exception->getMessage(), 220))
-                            ->danger()
+                            ->title('Import completed')
+                            ->body("Upserted {$result['upserted']} prompt versions.")
+                            ->success()
                             ->send();
-
-                        return;
-                    }
-
-                    Notification::make()
-                        ->title('Import completed')
-                        ->body("Upserted {$result['upserted']} prompt versions.")
-                        ->success()
-                        ->send();
-                }),
+                    }),
+            ])
+            ->label('Tools')
+            ->icon(Heroicon::WrenchScrewdriver)
+            ->color('gray')
+            ->button(),
             CreateAction::make(),
         ];
     }

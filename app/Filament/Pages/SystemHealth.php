@@ -50,25 +50,13 @@ class SystemHealth extends Page
 
     protected function getHeaderActions(): array
     {
-        $actions = [
+        return [
             Action::make('refresh')
                 ->label('Run checks')
                 ->icon(Heroicon::ArrowPath)
                 ->color('gray')
                 ->action(fn (): null => null),
-            Action::make('queueCenter')
-                ->label('Queue Center')
-                ->icon(Heroicon::Clock)
-                ->color('gray')
-                ->url(QueueCenter::getUrl()),
-            AdminPanelAccess::canManageAiSettings() ? Action::make('aiSettings')
-                ->label('AI Settings')
-                ->icon(Heroicon::Cog6Tooth)
-                ->color('gray')
-                ->url(AiSettings::getUrl()) : null,
         ];
-
-        return array_values(array_filter($actions));
     }
 
     public static function getNavigationBadge(): ?string

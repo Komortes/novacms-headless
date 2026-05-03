@@ -1,4 +1,90 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      DB_HOST: db
+      REDIS_HOST: redis
+      OLLAMA_BASE_URL: http://ollama:11434
+      REVERB_HOST: reverb
+      REVERB_SERVER_HOST: 0.0.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+      - ollama
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  horizon:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      DB_HOST: db
+      REDIS_HOST: redis
+      OLLAMA_BASE_URL: http://ollama:11434
+      REVERB_HOST: reverb
+    depends_on:
+      - app
+    command: php artisan horizon
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      DB_HOST: db
+      REDIS_HOST: redis
+      REVERB_HOST: reverb
+      REVERB_SERVER_HOST: 0.0.0.0
+    ports:
+      - "8080:8080"
+    depends_on:
+      - app
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+
+  pail:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - composer-cache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      DB_HOST: db
+      REDIS_HOST: redis
+    depends_on:
+      - app
+    command: php artisan pail --timeout=0
+
+  node:
+    image: node:22-alpine
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    ports:
+      - "5173:5173"
+    command: npm run dev
+
   db:
     image: pgvector/pgvector:pg16
     environment:
@@ -23,5 +109,6 @@ services:
       - ollama:/root/.ollama
 
 volumes:
+  composer-cache:
   pgdata:
   ollama:

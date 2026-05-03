@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Resources\Contents\ContentResource;
+use App\Filament\Widgets\OllamaModelLibraryWidget;
 use App\Services\AiSettingsManager;
 use App\Services\RuntimeHealthService;
 use App\Support\AdminPanelAccess;
@@ -75,6 +76,18 @@ class AiSettings extends Page
     public function getMaxContentWidth(): Width|string|null
     {
         return Width::Full;
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [
+            OllamaModelLibraryWidget::class,
+        ];
+    }
+
+    public function getFooterWidgetsColumns(): int|array
+    {
+        return 1;
     }
 
     public function form(Schema $schema): Schema

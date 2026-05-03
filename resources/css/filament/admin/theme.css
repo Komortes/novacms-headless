@@ -22,39 +22,51 @@
         background: var(--nova-admin-bg);
     }
 
+    .fi-main,
+    .fi-page,
+    .fi-page-main,
+    .fi-page-content {
+        @apply w-full max-w-none;
+    }
+
     .fi-main-ctn {
-        @apply px-4 pb-10 pt-4 sm:px-6 lg:px-8;
+        @apply px-4 pb-8 pt-4 sm:px-6 lg:px-8;
     }
 
     .fi-page,
     .fi-page-header-main-ctn,
     .fi-page-main,
     .fi-page-content {
-        @apply gap-6 space-y-6;
+        @apply gap-5 space-y-5;
     }
 
     .fi-header,
     .fi-page-sub-navigation-tabs,
-    .fi-ta-ctn,
-    .fi-section,
-    .fi-wi-widget,
     .fi-modal-window {
         @apply border bg-white/78 backdrop-blur-xl dark:bg-slate-950/60;
         border-color: var(--nova-admin-border-light);
         box-shadow: var(--nova-admin-soft-shadow);
     }
 
+    .fi-ta-ctn,
+    .fi-section,
+    .fi-wi-widget {
+        @apply border bg-white dark:bg-slate-950;
+        border-color: var(--nova-admin-border-light);
+        box-shadow: var(--nova-admin-soft-shadow);
+    }
+
     .dark .fi-header,
     .dark .fi-page-sub-navigation-tabs,
+    .dark .fi-modal-window,
     .dark .fi-ta-ctn,
     .dark .fi-section,
-    .dark .fi-wi-widget,
-    .dark .fi-modal-window {
+    .dark .fi-wi-widget {
         border-color: var(--nova-admin-border-dark);
     }
 
     .fi-header {
-        @apply rounded-[1.75rem] px-6 py-6;
+        @apply rounded-[1.25rem] px-5 py-5;
         box-shadow: var(--nova-admin-surface-shadow);
     }
 
@@ -168,15 +180,15 @@
     }
 
     .fi-header-heading {
-        @apply text-[clamp(1.7rem,1.25rem+1vw,2.45rem)] font-semibold tracking-tight text-slate-950 dark:text-slate-50;
+        @apply text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50;
     }
 
     .fi-header-subheading {
-        @apply mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300;
+        @apply mt-2 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300;
     }
 
     .fi-header-actions-ctn {
-        @apply items-start gap-2.5;
+        @apply items-start gap-2;
     }
 
     .fi-breadcrumbs {
@@ -319,7 +331,7 @@
     }
 
     .fi-ta-header {
-        @apply px-6 pt-6;
+        @apply px-5 pt-5;
     }
 
     .fi-ta-header-heading {
@@ -332,7 +344,7 @@
 
     .fi-ta-header-toolbar,
     .fi-ta-content-header {
-        @apply border-t border-slate-200/70 px-6 py-4 dark:border-white/10;
+        @apply border-t border-slate-200/70 px-5 py-3 dark:border-white/10;
     }
 
     .fi-ta-row {
@@ -373,6 +385,10 @@
         @apply block rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/70 dark:border-slate-800/70 dark:bg-slate-950/55 dark:hover:border-sky-700 dark:hover:bg-sky-950/20;
     }
 
+    .nova-link-tile-compact {
+        @apply rounded-xl px-3 py-3 hover:translate-y-0;
+    }
+
     .nova-empty-state {
         @apply rounded-[1.3rem] border border-dashed border-slate-300/80 bg-slate-50/75 px-5 py-6 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300;
     }
@@ -397,11 +413,91 @@
         @apply rounded-[1.2rem] border border-slate-200/80 bg-white/88 px-4 py-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-950/55;
     }
 
+    .nova-signal-card-compact {
+        @apply rounded-xl px-3 py-3;
+    }
+
     .nova-signal-card-title {
         @apply text-sm font-semibold tracking-tight text-slate-950 dark:text-slate-100;
     }
 
     .nova-signal-card-copy {
         @apply mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300;
+    }
+
+    .nova-workspace {
+        @apply w-full;
+    }
+
+    .nova-dashboard-shell {
+        @apply grid gap-4 rounded-[1.25rem] border border-slate-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center;
+    }
+
+    .nova-kicker {
+        @apply text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400;
+    }
+
+    .nova-page-title {
+        @apply mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-3xl;
+    }
+
+    .nova-account-strip {
+        @apply grid min-w-full grid-cols-3 gap-3 rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-white/[0.04] lg:min-w-[24rem];
+    }
+
+    .nova-pill {
+        @apply inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-slate-200 dark:ring-white/10;
+    }
+
+    .nova-pill-amber {
+        @apply bg-amber-400/15 text-amber-800 ring-amber-300/30 dark:text-amber-100;
+    }
+
+    .nova-pill-emerald {
+        @apply bg-emerald-400/15 text-emerald-800 ring-emerald-300/30 dark:text-emerald-100;
+    }
+
+    .nova-pill-sky {
+        @apply bg-sky-400/15 text-sky-800 ring-sky-300/30 dark:text-sky-100;
+    }
+
+    .nova-pill-rose {
+        @apply bg-rose-400/15 text-rose-800 ring-rose-300/30 dark:text-rose-100;
+    }
+
+    .nova-metric-grid {
+        @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5;
+    }
+
+    .nova-metric-grid-four {
+        @apply lg:grid-cols-4;
+    }
+
+    .nova-count-badge {
+        @apply inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase leading-none tracking-wide text-slate-700 dark:bg-white/10 dark:text-slate-300;
+    }
+
+    .nova-count-indigo {
+        @apply bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200;
+    }
+
+    .nova-count-amber {
+        @apply bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200;
+    }
+
+    .nova-count-rose {
+        @apply bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200;
+    }
+
+    .nova-count-sky {
+        @apply bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200;
+    }
+
+    .nova-count-emerald {
+        @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200;
+    }
+
+    .nova-row-link {
+        @apply flex items-center justify-between gap-4 px-1 py-3 transition hover:bg-slate-50/60 dark:hover:bg-white/[0.03];
     }
 }

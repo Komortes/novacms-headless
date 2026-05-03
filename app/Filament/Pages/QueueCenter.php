@@ -65,16 +65,6 @@ class QueueCenter extends Page
                 ->icon(Heroicon::ArrowPath)
                 ->color('gray')
                 ->action(fn (): null => null),
-            Action::make('contentWorkspace')
-                ->label('Content Workspace')
-                ->icon(Heroicon::DocumentText)
-                ->color('gray')
-                ->url(ContentResource::getUrl('index')),
-            Action::make('systemHealth')
-                ->label('System Health')
-                ->icon(Heroicon::Signal)
-                ->color('gray')
-                ->url(\App\Filament\Pages\SystemHealth::getUrl()),
         ];
     }
 

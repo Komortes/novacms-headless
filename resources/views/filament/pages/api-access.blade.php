@@ -1,30 +1,12 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div class="space-y-5">
         <x-filament.ui.hero
             tone="sky"
             eyebrow="External API Access"
             title="API Token Control"
-            description="Issue, review, and retire GraphQL bearer tokens without leaving the admin. Treat this page as the token registry, not just a create action."
+            description="Issue, review, and retire GraphQL bearer tokens. Treat this page as the token registry."
         >
-            <x-slot:aside>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Security Notes</p>
-                <div class="mt-4 space-y-3 text-sm text-slate-200">
-                    <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                        <p class="font-semibold text-white">Least privilege first</p>
-                        <p class="mt-1 text-slate-300">Default new clients to read-only access unless a real write contract exists.</p>
-                    </div>
-                    <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                        <p class="font-semibold text-white">The plain token is shown once</p>
-                        <p class="mt-1 text-slate-300">After issuance, only the hash remains in storage. Copy the secret immediately.</p>
-                    </div>
-                    <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                        <p class="font-semibold text-white">Rotate aggressively</p>
-                        <p class="mt-1 text-slate-300">Revoke stale, privileged, or never-used tokens before they become ambient risk.</p>
-                    </div>
-                </div>
-            </x-slot:aside>
-
-            <div class="mt-5 flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/10">
                     Principals {{ $principalCount }}
                 </span>
@@ -41,86 +23,60 @@
             <x-filament.ui.metric-card
                 label="Registry"
                 :value="$tokenCount"
-                description="All issued tokens currently known to the admin."
+                description="All issued tokens."
                 tone="indigo"
             />
             <x-filament.ui.metric-card
                 label="Usable"
                 :value="$activeCount"
-                description="Active tokens that are not expired or revoked."
+                description="Active, not expired or revoked."
                 tone="emerald"
             />
             <x-filament.ui.metric-card
                 label="Expiring Soon"
                 :value="$expiringSoonCount"
-                description="Usable tokens reaching expiry within 7 days."
+                description="Within 7 days."
                 tone="amber"
             />
             <x-filament.ui.metric-card
                 label="Never Used"
                 :value="$neverUsedCount"
-                description="Usable tokens with no recorded request yet."
+                description="No recorded request yet."
                 tone="sky"
             />
             <x-filament.ui.metric-card
                 label="High Privilege"
                 :value="$privilegedCount"
-                description="Tokens carrying `graphql:admin` or full wildcard access."
+                description="Admin or wildcard access."
                 tone="rose"
             />
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <x-filament.ui.panel
-                eyebrow="Access Posture"
-                title="Recommended Ability Shapes"
-                description="Use these as the default contracts when issuing new tokens."
-            >
-                <div class="grid gap-3">
-                    @foreach ($abilityGuides as $guide)
-                        <article @class([
-                            'rounded-2xl border p-4',
-                            'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/30 dark:bg-emerald-900/10' => $guide['tone'] === 'emerald',
-                            'border-sky-200 bg-sky-50/70 dark:border-sky-800/30 dark:bg-sky-900/10' => $guide['tone'] === 'sky',
-                            'border-rose-200 bg-rose-50/70 dark:border-rose-800/30 dark:bg-rose-900/10' => $guide['tone'] === 'rose',
-                        ])>
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $guide['label'] }}</p>
-                                    <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{{ $guide['abilities'] }}</p>
-                                </div>
+        <x-filament.ui.panel
+            eyebrow="Access Posture"
+            title="Recommended Ability Shapes"
+            description="Use these as the default contracts when issuing new tokens."
+        >
+            <div class="grid gap-3 xl:grid-cols-3">
+                @foreach ($abilityGuides as $guide)
+                    <article @class([
+                        'rounded-2xl border p-4',
+                        'border-emerald-200 bg-emerald-50/70 dark:border-emerald-800/30 dark:bg-emerald-900/10' => $guide['tone'] === 'emerald',
+                        'border-sky-200 bg-sky-50/70 dark:border-sky-800/30 dark:bg-sky-900/10' => $guide['tone'] === 'sky',
+                        'border-rose-200 bg-rose-50/70 dark:border-rose-800/30 dark:bg-rose-900/10' => $guide['tone'] === 'rose',
+                    ])>
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $guide['label'] }}</p>
+                                <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{{ $guide['abilities'] }}</p>
                             </div>
-                            <p class="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $guide['description'] }}</p>
-                            <p class="mt-3 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ $guide['caution'] }}</p>
-                        </article>
-                    @endforeach
-                </div>
-            </x-filament.ui.panel>
-
-            <x-filament.ui.panel
-                tone="sky"
-                eyebrow="Client Bootstrap"
-                title="Smoke-Test New Tokens"
-                description="Issue the token, verify auth once, then hand it to the real client."
-            >
-                <div class="space-y-4">
-                    @foreach ($clientSnippets as $snippet)
-                        <article class="rounded-2xl border border-sky-200/70 bg-white/80 p-4 dark:border-sky-800/30 dark:bg-gray-950/60">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $snippet['title'] }}</p>
-                                    <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $snippet['description'] }}</p>
-                                </div>
-                                <span class="rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-800 dark:bg-sky-900/30 dark:text-sky-200">
-                                    {{ $snippet['language'] }}
-                                </span>
-                            </div>
-                            <pre class="nova-code-block mt-4"><code>{{ $snippet['code'] }}</code></pre>
-                        </article>
-                    @endforeach
-                </div>
-            </x-filament.ui.panel>
-        </section>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-200">{{ $guide['description'] }}</p>
+                        <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ $guide['caution'] }}</p>
+                    </article>
+                @endforeach
+            </div>
+        </x-filament.ui.panel>
 
         @if (filled($issuedPlainTextToken) && filled($issuedTokenMeta))
             <x-filament.ui.panel
@@ -160,27 +116,24 @@
             </x-filament.ui.panel>
         @endif
 
-        <section class="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-            <div class="space-y-6">
+        <section class="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+            <div class="space-y-5">
                 <x-filament.ui.panel
                     eyebrow="Lifecycle"
                     title="Registry Posture"
                 >
-                    <div class="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-1">
+                    <div class="grid gap-3 text-sm">
                         <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Revoked</p>
                             <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $revokedCount }}</p>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Retired tokens that cannot be used anymore.</p>
                         </div>
                         <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Expired</p>
                             <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $expiredCount }}</p>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Historical tokens that need replacement if the client still matters.</p>
                         </div>
                         <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Principals</p>
                             <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $principalCount }}</p>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Unique users with at least one issued token.</p>
                         </div>
                     </div>
                 </x-filament.ui.panel>
@@ -210,7 +163,7 @@
                                         </span>
                                     </div>
 
-                                    <div class="mt-4 flex flex-wrap gap-2">
+                                    <div class="mt-3 flex flex-wrap gap-2">
                                         @foreach (($token->abilities ?? []) as $ability)
                                             <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ $ability }}</span>
                                         @endforeach
@@ -257,7 +210,7 @@
                                     </span>
                                 </div>
 
-                                <div class="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                                <div class="mt-3 grid gap-2 text-xs sm:grid-cols-3">
                                     <div class="rounded-xl bg-white px-3 py-2 dark:bg-gray-950">
                                         <p class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Abilities</p>
                                         <p class="mt-1 break-words text-gray-900 dark:text-gray-100">{{ implode(', ', $token->abilities ?? []) ?: 'n/a' }}</p>
@@ -272,7 +225,7 @@
                                     </div>
                                 </div>
 
-                                <div class="mt-4 flex flex-wrap gap-2">
+                                <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach (($token->abilities ?? []) as $ability)
                                         <span @class([
                                             'rounded-full px-2.5 py-1 text-[11px] font-medium',
@@ -284,8 +237,8 @@
                                     @endforeach
                                 </div>
 
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    @if (! $token->isRevoked())
+                                @if (! $token->isRevoked())
+                                    <div class="mt-3">
                                         <x-filament::button
                                             size="xs"
                                             color="danger"
@@ -293,8 +246,8 @@
                                         >
                                             Revoke
                                         </x-filament::button>
-                                    @endif
-                                </div>
+                                    </div>
+                                @endif
                             </article>
                         @endforeach
                     </div>

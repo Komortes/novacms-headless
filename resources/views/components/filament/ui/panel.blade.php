@@ -44,7 +44,7 @@
     $toneClasses = $tones[$tone] ?? $tones['default'];
 @endphp
 
-<section {{ $attributes->class(['relative isolate overflow-hidden rounded-[1.5rem] border shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-36px_rgba(15,23,42,0.22)]', $toneClasses['section'], $padding]) }}>
+<section {{ $attributes->class(['relative isolate overflow-hidden rounded-[1.5rem] border shadow-sm', $toneClasses['section'], $padding]) }}>
     <div @class([
         'absolute inset-x-0 top-0 h-px bg-gradient-to-r',
         $toneClasses['accent'],

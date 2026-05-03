@@ -89,7 +89,7 @@ class EditPrompt extends EditRecord
             'familyHistory' => Prompt::query()
                 ->where('name', $record->name)
                 ->orderByDesc('id')
-                ->get(['name', 'version', 'is_active', 'updated_at', 'template', 'parameters'])
+                ->get(['id', 'name', 'version', 'is_active', 'updated_at', 'template', 'parameters'])
                 ->map(fn (Prompt $prompt): array => [
                     'name' => (string) $prompt->name,
                     'version' => (string) $prompt->version,
