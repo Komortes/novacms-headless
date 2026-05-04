@@ -18,7 +18,7 @@ class OllamaModelService
     public function listInstalledModels(): array
     {
         try {
-            $response = Http::timeout(5)->get($this->baseUrl() . '/api/tags');
+            $response = Http::timeout(5)->get($this->baseUrl().'/api/tags');
 
             if (! $response->ok()) {
                 return [];
@@ -55,7 +55,7 @@ class OllamaModelService
         try {
             $response = Http::timeout(15)
                 ->asJson()
-                ->delete($this->baseUrl() . '/api/delete', ['model' => $model]);
+                ->delete($this->baseUrl().'/api/delete', ['model' => $model]);
 
             return $response->successful() || $response->status() === 200;
         } catch (Throwable) {
@@ -66,7 +66,7 @@ class OllamaModelService
     public function isReachable(): bool
     {
         try {
-            return Http::timeout(3)->get($this->baseUrl() . '/api/tags')->ok();
+            return Http::timeout(3)->get($this->baseUrl().'/api/tags')->ok();
         } catch (Throwable) {
             return false;
         }
@@ -93,7 +93,7 @@ class OllamaModelService
             [
                 'id' => 'llama3.2:1b',
                 'name' => 'Llama 3.2 · 1B',
-                'description' => 'Meta's nano Llama. Fast, low memory, acceptable for short content ops.',
+                'description' => 'Meta nano Llama. Fast, low memory, acceptable for short content ops.',
                 'size_approx' => '1.3 GB',
                 'param_size' => '1B',
                 'category' => 'generation',
@@ -102,7 +102,7 @@ class OllamaModelService
             [
                 'id' => 'gemma3:1b',
                 'name' => 'Gemma 3 · 1B',
-                'description' => 'Google's smallest Gemma. Useful as a draft-quality generation baseline.',
+                'description' => 'Google smallest Gemma. Useful as a draft-quality generation baseline.',
                 'size_approx' => '815 MB',
                 'param_size' => '1B',
                 'category' => 'generation',
@@ -139,7 +139,7 @@ class OllamaModelService
             [
                 'id' => 'llama3.2:3b',
                 'name' => 'Llama 3.2 · 3B',
-                'description' => 'Meta's recommended 3B for instruction following and content drafting.',
+                'description' => 'Meta recommended 3B for instruction following and content drafting.',
                 'size_approx' => '2.0 GB',
                 'param_size' => '3B',
                 'category' => 'generation',
@@ -148,7 +148,7 @@ class OllamaModelService
             [
                 'id' => 'gemma3:4b',
                 'name' => 'Gemma 3 · 4B',
-                'description' => 'Google's mid-size Gemma. Solid output quality for editorial generation.',
+                'description' => 'Google mid-size Gemma. Solid output quality for editorial generation.',
                 'size_approx' => '3.3 GB',
                 'param_size' => '4B',
                 'category' => 'generation',
@@ -157,7 +157,7 @@ class OllamaModelService
             [
                 'id' => 'phi4-mini:3.8b',
                 'name' => 'Phi 4 Mini · 3.8B',
-                'description' => 'Microsoft's compact reasoning model. Good reasoning-to-size ratio.',
+                'description' => 'Microsoft compact reasoning model. Good reasoning-to-size ratio.',
                 'size_approx' => '2.5 GB',
                 'param_size' => '3.8B',
                 'category' => 'generation',
@@ -185,7 +185,7 @@ class OllamaModelService
             [
                 'id' => 'llama3.1:8b',
                 'name' => 'Llama 3.1 · 8B',
-                'description' => 'Meta's flagship 8B. Excellent instruction following, high quality output.',
+                'description' => 'Meta flagship 8B. Excellent instruction following, high quality output.',
                 'size_approx' => '4.7 GB',
                 'param_size' => '8B',
                 'category' => 'generation',
@@ -194,7 +194,7 @@ class OllamaModelService
             [
                 'id' => 'gemma3:9b',
                 'name' => 'Gemma 3 · 9B',
-                'description' => 'Google's larger Gemma. Noticeably better coherence on complex tasks.',
+                'description' => 'Google larger Gemma. Noticeably better coherence on complex tasks.',
                 'size_approx' => '5.8 GB',
                 'param_size' => '9B',
                 'category' => 'generation',

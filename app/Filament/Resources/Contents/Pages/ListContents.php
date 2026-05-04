@@ -88,6 +88,11 @@ class ListContents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('faqInfo')
+                ->label('FAQ & info')
+                ->icon(Heroicon::QuestionMarkCircle)
+                ->color('gray')
+                ->url($this->getResourceUrl('faq-info')),
             ActionGroup::make([
                 Action::make('exportBundle')
                     ->label('Export bundle')
@@ -275,11 +280,11 @@ class ListContents extends ListRecords
                             ->send();
                     }),
             ])
-            ->label('Tools')
-            ->icon(Heroicon::WrenchScrewdriver)
-            ->color('gray')
-            ->button()
-            ->visible(fn (): bool => AdminPanelAccess::canManageContentCatalog() || AdminPanelAccess::canManageEmbeddings()),
+                ->label('Tools')
+                ->icon(Heroicon::WrenchScrewdriver)
+                ->color('gray')
+                ->button()
+                ->visible(fn (): bool => AdminPanelAccess::canManageContentCatalog() || AdminPanelAccess::canManageEmbeddings()),
             CreateAction::make(),
         ];
     }

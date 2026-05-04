@@ -109,10 +109,10 @@ class ListPrompts extends ListRecords
                             ->send();
                     }),
             ])
-            ->label('Tools')
-            ->icon(Heroicon::WrenchScrewdriver)
-            ->color('gray')
-            ->button(),
+                ->label('Tools')
+                ->icon(Heroicon::WrenchScrewdriver)
+                ->color('gray')
+                ->button(),
             CreateAction::make(),
         ];
     }

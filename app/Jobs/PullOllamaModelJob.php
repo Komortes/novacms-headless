@@ -38,8 +38,8 @@ class PullOllamaModelJob implements ShouldQueue
         $task->update(['status' => 'pulling', 'status_text' => 'Connecting…']);
 
         try {
-            $client = new Client();
-            $response = $client->post($baseUrl . '/api/pull', [
+            $client = new Client;
+            $response = $client->post($baseUrl.'/api/pull', [
                 RequestOptions::JSON => ['model' => $task->model, 'stream' => true],
                 RequestOptions::STREAM => true,
                 RequestOptions::TIMEOUT => 3600,
