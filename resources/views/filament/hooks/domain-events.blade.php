@@ -1,4 +1,11 @@
-@if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+@php
+    $manifestPath = public_path('build/manifest.json');
+    $manifest = file_exists($manifestPath) ? json_decode((string) file_get_contents($manifestPath), true) : [];
+    $hasDomainEventsAsset = file_exists(public_path('hot'))
+        || (is_array($manifest) && array_key_exists('resources/js/app.js', $manifest));
+@endphp
+
+@if ($hasDomainEventsAsset)
     @vite('resources/js/app.js')
     <script>
         (() => {
