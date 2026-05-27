@@ -26,9 +26,15 @@ class ApiTokenAuthenticator
             return null;
         }
 
-        $token->markUsed();
         $request->attributes->set(self::REQUEST_ATTRIBUTE_TOKEN, $token);
         $request->attributes->set(self::REQUEST_ATTRIBUTE_GUARD, 'api-token');
+        $request->attributes->set('novacms.pending_mark_used', $token);
+
+        // Mark used after the full request cycle so that ability-rejected requests
+        // do not falsely update last_used_at (see ApiAbilityDirective).
+        app()->terminating(function () use ($request): void {
+            $request->attributes->get('novacms.pending_mark_used')?->markUsed();
+        });
 
         return $token->user;
     }

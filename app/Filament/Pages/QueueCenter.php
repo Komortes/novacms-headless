@@ -88,6 +88,8 @@ class QueueCenter extends Page
 
     public function cancelQueued(int $contentId): void
     {
+        abort_unless(AdminPanelAccess::canAccessQueueOperations(), 403);
+
         $content = Content::query()->find($contentId);
 
         if (! $content) {

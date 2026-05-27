@@ -152,6 +152,7 @@ class ApiAccess extends Page
     {
         $count = ApiAccessToken::query()
             ->whereNull('revoked_at')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->count();
 
         return $count > 0 ? (string) $count : null;
@@ -160,6 +161,7 @@ class ApiAccess extends Page
     public static function getNavigationBadgeColor(): string|array|null
     {
         $expired = ApiAccessToken::query()
+            ->whereNull('revoked_at')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->count();
@@ -167,8 +169,16 @@ class ApiAccess extends Page
         return $expired > 0 ? 'warning' : 'gray';
     }
 
+    public function clearIssuedToken(): void
+    {
+        $this->issuedPlainTextToken = null;
+        $this->issuedTokenMeta = null;
+    }
+
     public function revokeToken(int $tokenId): void
     {
+        abort_unless(AdminPanelAccess::canManageApiAccess(), 403);
+
         $token = ApiAccessToken::query()->find($tokenId);
 
         if (! $token) {

@@ -137,10 +137,10 @@ class AiSettingsManager
 
         $settings->forceFill([
             'default_provider' => $this->normalizeProvider((string) Arr::get($data, 'default_provider', config('ai.provider', 'ollama'))),
-            'ollama_base_url' => $this->normalizeNullableString(Arr::get($data, 'ollama_base_url')),
+            'ollama_base_url' => $this->normalizeBaseUrl(Arr::get($data, 'ollama_base_url')),
             'ollama_model' => $this->normalizeNullableString(Arr::get($data, 'ollama_model')),
             'ollama_timeout' => $this->normalizeNullableInt(Arr::get($data, 'ollama_timeout')),
-            'openai_base_url' => $this->normalizeNullableString(Arr::get($data, 'openai_base_url')),
+            'openai_base_url' => $this->normalizeBaseUrl(Arr::get($data, 'openai_base_url')),
             'openai_model' => $this->normalizeNullableString(Arr::get($data, 'openai_model')),
             'openai_timeout' => $this->normalizeNullableInt(Arr::get($data, 'openai_timeout')),
         ]);
@@ -206,6 +206,23 @@ class AiSettingsManager
     private function normalizeProvider(string $provider): string
     {
         return array_key_exists($provider, $this->providerOptions()) ? $provider : 'ollama';
+    }
+
+    private function normalizeBaseUrl(mixed $value): ?string
+    {
+        $url = $this->normalizeNullableString($value);
+
+        if ($url === null) {
+            return null;
+        }
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        return $url;
     }
 
     private function normalizeNullableString(mixed $value): ?string

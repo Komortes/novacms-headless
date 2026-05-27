@@ -103,7 +103,11 @@ class PullOllamaModelJob implements ShouldQueue
             $task->refresh();
 
             if ($task->status !== 'success') {
-                $task->update(['status' => 'success', 'status_text' => 'Model ready', 'progress' => 100]);
+                $task->update([
+                    'status' => 'failed',
+                    'status_text' => 'Pull incomplete',
+                    'error' => 'Stream ended without a success confirmation from Ollama.',
+                ]);
             }
         } catch (GuzzleException $e) {
             $task->update([

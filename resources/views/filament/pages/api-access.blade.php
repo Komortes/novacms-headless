@@ -112,6 +112,16 @@
                             <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">{{ $ability }}</span>
                         @endforeach
                     </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            wire:click="clearIssuedToken"
+                            type="button"
+                            class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
+                        >
+                            I've copied it — dismiss
+                        </button>
+                    </div>
                 </div>
             </x-filament.ui.panel>
         @endif

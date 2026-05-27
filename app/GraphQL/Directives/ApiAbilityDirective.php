@@ -39,6 +39,8 @@ GRAPHQL;
                 $token = app(ApiTokenAuthenticator::class)->currentToken($request);
 
                 if ($token !== null && ! $token->can($ability)) {
+                    // Prevent markUsed from firing — the request was rejected.
+                    $request->attributes->remove('novacms.pending_mark_used');
                     throw new AuthorizationException("API token is missing required ability [{$ability}].");
                 }
             }

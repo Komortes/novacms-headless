@@ -26,6 +26,8 @@ class OllamaModelLibraryWidget extends Widget
 
     public function startPull(): void
     {
+        abort_unless(AdminPanelAccess::canManageAiSettings(), 403);
+
         $model = trim($this->newModelName);
 
         if ($model === '') {
@@ -68,6 +70,8 @@ class OllamaModelLibraryWidget extends Widget
 
     public function deleteModel(string $model): void
     {
+        abort_unless(AdminPanelAccess::canManageAiSettings(), 403);
+
         $deleted = app(OllamaModelService::class)->deleteModel($model);
 
         if ($deleted) {
@@ -79,6 +83,8 @@ class OllamaModelLibraryWidget extends Widget
 
     public function dismissTask(int $taskId): void
     {
+        abort_unless(AdminPanelAccess::canManageAiSettings(), 403);
+
         ModelPullTask::query()
             ->where('id', $taskId)
             ->whereIn('status', ['success', 'failed'])
