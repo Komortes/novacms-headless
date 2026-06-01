@@ -100,6 +100,17 @@ class PullOllamaModelJob implements ShouldQueue
                 }
             }
 
+            // Flush any final line that arrived without a trailing newline.
+            $remaining = trim($buffer);
+            if ($remaining !== '') {
+                $data = json_decode($remaining, true);
+                if (is_array($data) && ($data['status'] ?? '') === 'success') {
+                    $task->update(['status' => 'success', 'status_text' => 'Model ready', 'progress' => 100]);
+
+                    return;
+                }
+            }
+
             $task->refresh();
 
             if ($task->status !== 'success') {

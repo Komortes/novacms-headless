@@ -15,9 +15,12 @@
 
             window.__novaCmsDomainEventsBooted = true;
 
+            let bootAttempts = 0;
             const boot = () => {
                 if (! window.Echo) {
-                    setTimeout(boot, 1200);
+                    if (bootAttempts++ < 25) {
+                        setTimeout(boot, 1200);
+                    }
                     return;
                 }
 
@@ -30,7 +33,7 @@
                     }));
 
                     if (window.Livewire?.dispatch) {
-                        window.Livewire.dispatch('novacms-domain-event');
+                        window.Livewire.dispatch('novacms-domain-event', { envelope });
                     }
                 });
             };

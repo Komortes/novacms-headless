@@ -8,13 +8,13 @@
         >
             <div class="flex flex-wrap gap-2">
                 <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 ring-1 ring-white/10">
-                    Principals {{ $principalCount }}
+                    Principals: {{ $principalCount }}
                 </span>
                 <span class="inline-flex items-center rounded-full bg-amber-400/15 px-3 py-1 text-xs font-medium text-amber-100 ring-1 ring-amber-300/20">
-                    Expiring soon {{ $expiringSoonCount }}
+                    Expiring soon: {{ $expiringSoonCount }}
                 </span>
                 <span class="inline-flex items-center rounded-full bg-rose-400/15 px-3 py-1 text-xs font-medium text-rose-100 ring-1 ring-rose-300/20">
-                    High privilege {{ $privilegedCount }}
+                    High privilege: {{ $privilegedCount }}
                 </span>
             </div>
         </x-filament.ui.hero>
@@ -86,7 +86,7 @@
                 badge="shown once"
             >
                 <div class="space-y-4">
-                    <pre class="nova-code-block"><code>{{ $issuedPlainTextToken }}</code></pre>
+                    <pre class="nova-code-block overflow-x-auto"><code>{{ $issuedPlainTextToken }}</code></pre>
 
                     <div class="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                         <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
@@ -253,6 +253,7 @@
                                             size="xs"
                                             color="danger"
                                             wire:click="revokeToken({{ $token->id }})"
+                                            wire:confirm="Revoke token #{{ $token->id }}? This cannot be undone."
                                         >
                                             Revoke
                                         </x-filament::button>

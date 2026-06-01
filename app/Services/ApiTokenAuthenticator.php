@@ -32,9 +32,13 @@ class ApiTokenAuthenticator
 
         // Mark used after the full request cycle so that ability-rejected requests
         // do not falsely update last_used_at (see ApiAbilityDirective).
-        app()->terminating(function () use ($request): void {
-            $request->attributes->get('novacms.pending_mark_used')?->markUsed();
-        });
+        // Guard against double-registration if authenticate() is called more than once per request.
+        if (! $request->attributes->get('novacms.terminating_registered')) {
+            $request->attributes->set('novacms.terminating_registered', true);
+            app()->terminating(function () use ($request): void {
+                $request->attributes->get('novacms.pending_mark_used')?->markUsed();
+            });
+        }
 
         return $token->user;
     }
