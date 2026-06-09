@@ -1,6 +1,8 @@
 *.log
 docs/superpowers/
 .DS_Store
+**/.DS_Store
+.playwright-cli/
 .env
 .env.backup
 .env.production
@@ -23,3 +25,6 @@ docs/superpowers/
 Homestead.json
 Homestead.yaml
 Thumbs.db
+secrets/raw/
+!secrets/raw/.gitkeep
+pub-cert.pem

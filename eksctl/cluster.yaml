@@ -1,0 +1,42 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: novacms
+  region: eu-west-1
+  version: "1.29"
+
+iam:
+  withOIDC: true
+
+managedNodeGroups:
+  - name: general
+    instanceType: t3.medium
+    minSize: 2
+    maxSize: 5
+    desiredCapacity: 2
+    privateNetworking: true
+    labels:
+      role: general
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/novacms: "owned"
+
+  - name: ollama
+    instanceType: m5.xlarge
+    minSize: 0
+    maxSize: 2
+    desiredCapacity: 1
+    privateNetworking: true
+    labels:
+      role: ollama
+    taints:
+      - key: ollama
+        value: "true"
+        effect: NoSchedule
+
+addons:
+  - name: vpc-cni
+  - name: coredns
+  - name: kube-proxy
+  - name: aws-ebs-csi-driver

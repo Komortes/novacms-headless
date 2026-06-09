@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "novacms.fullname" . }}-reverb
+  labels:
+    {{- include "novacms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: reverb
+spec:
+  replicas: {{ .Values.reverb.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "novacms.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: reverb
+  template:
+    metadata:
+      labels:
+        {{- include "novacms.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: reverb
+    spec:
+      containers:
+        - name: reverb
+          image: "{{ .Values.reverb.image.repository }}:{{ .Values.reverb.image.tag }}"
+          imagePullPolicy: {{ .Values.reverb.image.pullPolicy }}
+          command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+          ports:
+            - name: ws
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: novacms-secrets
+          env:
+            - name: REVERB_SERVER_HOST
+              value: "0.0.0.0"
+            - name: REVERB_SERVER_PORT
+              value: "8080"
+            - name: REDIS_HOST
+              value: {{ include "novacms.redisHost" . }}
+            - name: REDIS_PORT
+              value: "6379"
+          resources:
+            {{- toYaml .Values.reverb.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10

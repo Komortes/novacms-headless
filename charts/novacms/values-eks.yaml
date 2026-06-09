@@ -1,0 +1,40 @@
+# EKS overrides — gp3 storage, ECR images, full monitoring
+app:
+  image:
+    repository: 123456789.dkr.ecr.eu-west-1.amazonaws.com/novacms-app
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 2
+
+horizon:
+  image:
+    repository: 123456789.dkr.ecr.eu-west-1.amazonaws.com/novacms-app
+    tag: latest
+    pullPolicy: Always
+
+reverb:
+  image:
+    repository: 123456789.dkr.ecr.eu-west-1.amazonaws.com/novacms-app
+    tag: latest
+    pullPolicy: Always
+
+ollama:
+  persistence:
+    size: 50Gi
+    storageClass: gp3
+
+postgresql:
+  primary:
+    persistence:
+      storageClass: gp3
+
+redis:
+  master:
+    persistence:
+      storageClass: gp3
+
+kube-prometheus-stack:
+  enabled: true
+
+sealed-secrets:
+  enabled: true

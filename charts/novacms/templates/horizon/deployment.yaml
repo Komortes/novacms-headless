@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "novacms.fullname" . }}-horizon
+  labels:
+    {{- include "novacms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: horizon
+spec:
+  replicas: {{ .Values.horizon.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "novacms.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: horizon
+  template:
+    metadata:
+      labels:
+        {{- include "novacms.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: horizon
+    spec:
+      containers:
+        - name: horizon
+          image: "{{ .Values.horizon.image.repository }}:{{ .Values.horizon.image.tag }}"
+          imagePullPolicy: {{ .Values.horizon.image.pullPolicy }}
+          command: ["php", "artisan", "horizon"]
+          envFrom:
+            - secretRef:
+                name: novacms-secrets
+          env:
+            - name: DB_CONNECTION
+              value: pgsql
+            - name: DB_HOST
+              value: {{ include "novacms.postgresqlHost" . }}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: novacms
+            - name: DB_USERNAME
+              value: novacms
+            - name: REDIS_HOST
+              value: {{ include "novacms.redisHost" . }}
+            - name: REDIS_PORT
+              value: "6379"
+            - name: QUEUE_CONNECTION
+              value: redis
+          resources:
+            {{- toYaml .Values.horizon.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - php
+                - artisan
+                - horizon:status
+            initialDelaySeconds: 30
+            periodSeconds: 30

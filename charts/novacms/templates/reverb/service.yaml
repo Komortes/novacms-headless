@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "novacms.fullname" . }}-reverb
+  labels:
+    {{- include "novacms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: reverb
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: ws
+      protocol: TCP
+      name: ws
+  selector:
+    {{- include "novacms.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: reverb

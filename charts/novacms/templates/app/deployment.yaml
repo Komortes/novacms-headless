@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "novacms.fullname" . }}-app
+  labels:
+    {{- include "novacms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "novacms.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: app
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "novacms.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: app
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+          envFrom:
+            - secretRef:
+                name: novacms-secrets
+          env:
+            - name: DB_CONNECTION
+              value: pgsql
+            - name: DB_HOST
+              value: {{ include "novacms.postgresqlHost" . }}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: novacms
+            - name: DB_USERNAME
+              value: novacms
+            - name: REDIS_HOST
+              value: {{ include "novacms.redisHost" . }}
+            - name: REDIS_PORT
+              value: "6379"
+            - name: OLLAMA_BASE_URL
+              value: http://{{ include "novacms.ollamaHost" . }}:11434
+            - name: REVERB_HOST
+              value: {{ include "novacms.reverbHost" . }}
+            - name: REVERB_PORT
+              value: "8080"
+            - name: REVERB_SCHEME
+              value: http
+            - name: QUEUE_CONNECTION
+              value: redis
+            - name: CACHE_STORE
+              value: redis
+            - name: SESSION_DRIVER
+              value: redis
+          resources:
+            {{- toYaml .Values.app.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /up
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /up
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30

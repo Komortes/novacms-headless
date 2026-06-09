@@ -1,0 +1,61 @@
+# Minikube overrides — smaller resources, local images, monitoring disabled
+app:
+  image:
+    repository: novacms-app
+    tag: local
+    pullPolicy: Never
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  hpa:
+    minReplicas: 1
+    maxReplicas: 2
+
+horizon:
+  image:
+    repository: novacms-app
+    tag: local
+    pullPolicy: Never
+  replicaCount: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 1
+
+reverb:
+  image:
+    repository: novacms-app
+    tag: local
+    pullPolicy: Never
+
+ollama:
+  persistence:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 4Gi
+
+postgresql:
+  primary:
+    persistence:
+      storageClass: standard
+
+redis:
+  master:
+    persistence:
+      storageClass: standard
+
+kube-prometheus-stack:
+  enabled: false
+
+sealed-secrets:
+  enabled: true

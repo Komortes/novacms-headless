@@ -13,7 +13,8 @@
         "laravel/reverb": "^1.8",
         "laravel/tinker": "^2.10.1",
         "nuwave/lighthouse": "^6.65",
-        "predis/predis": "^3.4"
+        "predis/predis": "^3.4",
+        "spatie/laravel-prometheus": "^1.6"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

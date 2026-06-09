@@ -448,6 +448,31 @@ query {
 - live smoke command validates queued summary, queued embeddings, and semantic search against the running stack
 - GitHub Actions CI runs Pint, tests, and GraphQL schema validation on pushes and pull requests
 
+## Sealed Secrets
+
+Secrets are encrypted with [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets).
+The `secrets/raw/` directory is gitignored — only `secrets/sealed/` is committed.
+
+```bash
+# 1. Copy example and fill in real values
+cp secrets/raw/app-secrets.yaml.example secrets/raw/app-secrets.yaml
+# edit secrets/raw/app-secrets.yaml
+
+# 2. Fetch cluster public key (controller must be running)
+kubeseal --fetch-cert \
+  --controller-name=sealed-secrets \
+  --controller-namespace=kube-system \
+  > pub-cert.pem
+
+# 3. Seal
+kubeseal --cert pub-cert.pem --format yaml \
+  < secrets/raw/app-secrets.yaml \
+  > secrets/sealed/app-secrets.yaml
+
+# 4. Apply
+kubectl apply -f secrets/sealed/app-secrets.yaml
+```
+
 ## License
 
 MIT
