@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "komortes/novacms-headless",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "AI-powered headless CMS built with Laravel, Filament, Lighthouse GraphQL, queues, and semantic search.",
+    "keywords": ["cms", "headless-cms", "laravel", "filament", "graphql", "ai", "semantic-search"],
     "license": "MIT",
     "require": {
         "php": "^8.4",

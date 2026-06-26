@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: php-base
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
@@ -26,6 +27,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: php-base
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
@@ -44,6 +46,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: php-base
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
@@ -64,6 +67,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: php-base
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html

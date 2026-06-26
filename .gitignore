@@ -25,6 +25,7 @@ docs/superpowers/
 Homestead.json
 Homestead.yaml
 Thumbs.db
-secrets/raw/
+secrets/raw/*
 !secrets/raw/.gitkeep
+!secrets/raw/app-secrets.yaml.example
 pub-cert.pem
