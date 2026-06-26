@@ -6,6 +6,7 @@ on:
 
 env:
   AWS_REGION: eu-west-1
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
   ECR_REPOSITORY: novacms-app
   EKS_CLUSTER_NAME: novacms
 
@@ -20,17 +21,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Skip deploy when AWS is not configured
+        if: ${{ env.AWS_ROLE_ARN == '' }}
+        run: |
+          echo "AWS_ROLE_ARN secret is not configured. Skipping ECR/EKS deploy."
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        if: ${{ env.AWS_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
+        if: ${{ env.AWS_ROLE_ARN != '' }}
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push image
+        if: ${{ env.AWS_ROLE_ARN != '' }}
         id: build
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -44,12 +53,14 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       - name: Update kubeconfig
+        if: ${{ env.AWS_ROLE_ARN != '' }}
         run: |
           aws eks update-kubeconfig \
             --name ${{ env.EKS_CLUSTER_NAME }} \
             --region ${{ env.AWS_REGION }}
 
       - name: Deploy via Helm
+        if: ${{ env.AWS_ROLE_ARN != '' }}
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
