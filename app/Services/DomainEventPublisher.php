@@ -39,7 +39,15 @@ class DomainEventPublisher
             return;
         }
 
-        Event::dispatch(new DomainEventBroadcasted($envelope));
+        try {
+            Event::dispatch(new DomainEventBroadcasted($envelope));
+        } catch (Throwable $exception) {
+            // A broadcast outage must never fail the surrounding job/request.
+            Log::warning('Domain event broadcast failed.', [
+                'name' => $envelope['name'] ?? 'unknown',
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**

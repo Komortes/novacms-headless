@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "novacms.fullname" . }}-migrate
+  labels:
+    {{- include "novacms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "novacms.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          command: ["php", "artisan", "migrate", "--force"]
+          envFrom:
+            - secretRef:
+                name: novacms-secrets
+          env:
+            - name: DB_CONNECTION
+              value: pgsql
+            - name: DB_HOST
+              value: {{ include "novacms.postgresqlHost" . }}
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: novacms
+            - name: DB_USERNAME
+              value: novacms
+            - name: REDIS_HOST
+              value: {{ include "novacms.redisHost" . }}
+            - name: REDIS_PORT
+              value: "6379"
+            - name: CACHE_STORE
+              value: redis

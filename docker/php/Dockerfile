@@ -48,6 +48,8 @@ RUN npm run build
 FROM php-base AS runtime
 
 ENV APP_ENV=production
+# artisan serve is a CLI server; without workers it handles one request at a time.
+ENV PHP_CLI_SERVER_WORKERS=8
 
 COPY --from=php-deps /var/www/html/vendor ./vendor
 COPY . .
@@ -65,8 +67,12 @@ RUN mkdir -p \
     && chmod -R ug+rwX storage bootstrap/cache \
     && composer dump-autoload --optimize --no-dev --no-scripts \
     && php artisan package:discover --ansi \
-    && php artisan config:clear --ansi
+    && php artisan config:clear --ansi \
+    && cp docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 8000
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

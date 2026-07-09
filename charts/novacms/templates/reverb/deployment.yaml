@@ -21,7 +21,7 @@ spec:
         - name: reverb
           image: "{{ .Values.reverb.image.repository }}:{{ .Values.reverb.image.tag }}"
           imagePullPolicy: {{ .Values.reverb.image.pullPolicy }}
-          command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+          args: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
           ports:
             - name: ws
               containerPort: 8080

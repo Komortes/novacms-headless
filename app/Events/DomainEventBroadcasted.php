@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -22,7 +22,7 @@ class DomainEventBroadcasted implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel((string) config('domain_events.broadcast.channel', 'novacms.domain-events')),
+            new PrivateChannel((string) config('domain_events.broadcast.channel', 'novacms.domain-events')),
         ];
     }
 

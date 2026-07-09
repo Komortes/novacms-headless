@@ -32,7 +32,9 @@ class ContentMutationValidator
             'title' => ['required', 'string', 'min:3', 'max:200'],
             'body' => ['required', 'string', 'min:1', 'max:100000'],
             'locale' => ['required', 'string', 'max:10', 'regex:/^[a-z]{2}(?:-[A-Z]{2})?$/'],
-            'status' => ['nullable', Rule::in(['draft', 'published', 'archived'])],
+            'status' => ['nullable', Rule::in(['draft', 'archived'])],
+        ], [
+            'status.in' => 'Content cannot be created as published: the publish quality gate requires a ready AI summary. Create it as draft, then publish.',
         ]);
 
         return $validator->validate();
@@ -66,7 +68,25 @@ class ContentMutationValidator
             'status' => ['sometimes', Rule::in(['draft', 'published', 'archived'])],
         ]);
 
-        return $validator->validate();
+        $validated = $validator->validate();
+
+        // Changing only the locale can silently collide with an existing
+        // slug+locale pair; the slug rule above runs only when slug is present.
+        if (array_key_exists('locale', $validated) && ! array_key_exists('slug', $validated)) {
+            $collision = Content::query()
+                ->where('slug', $content->slug)
+                ->where('locale', $validated['locale'])
+                ->whereKeyNot($content->id)
+                ->exists();
+
+            if ($collision) {
+                throw ValidationException::withMessages([
+                    'locale' => ["Content with slug [{$content->slug}] already exists for locale [{$validated['locale']}]."],
+                ]);
+            }
+        }
+
+        return $validated;
     }
 
     /**

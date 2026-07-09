@@ -25,7 +25,7 @@
                 }
 
                 const channelName = @js((string) config('domain_events.broadcast.channel', 'novacms.domain-events'));
-                const channel = window.Echo.channel(channelName);
+                const channel = window.Echo.private(channelName);
 
                 channel.listen('.domain.event', (envelope) => {
                     window.dispatchEvent(new CustomEvent('novacms-domain-event', {

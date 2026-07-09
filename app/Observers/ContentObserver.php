@@ -27,14 +27,17 @@ class ContentObserver
 
     public function updated(Content $content): void
     {
-        if (! $content->wasChanged('content_hash')) {
-            return;
+        if ($content->wasChanged('content_hash')) {
+            $this->markSummaryAsPending($content);
+            $this->dispatchSummary($content);
+            $this->dispatchEmbeddings($content);
         }
 
-        $this->markSummaryAsPending($content);
-        $this->dispatchSummary($content);
-        $this->dispatchEmbeddings($content);
-        $this->publishContentUpdated($content);
+        // Status transitions (draft -> published -> archived) do not change the
+        // content hash but headless consumers still need to hear about them.
+        if ($content->wasChanged('content_hash') || $content->wasChanged('status')) {
+            $this->publishContentUpdated($content);
+        }
     }
 
     public function updating(Content $content): void
@@ -99,6 +102,7 @@ class ContentObserver
             'content_id' => $content->id,
             'slug' => $content->slug,
             'locale' => $content->locale,
+            'status' => $content->status instanceof ContentStatus ? $content->status->value : (string) $content->status,
             'content_hash' => $content->content_hash,
         ]);
     }

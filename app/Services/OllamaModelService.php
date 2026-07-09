@@ -57,7 +57,7 @@ class OllamaModelService
                 ->asJson()
                 ->delete($this->baseUrl().'/api/delete', ['model' => $model]);
 
-            return $response->successful() || $response->status() === 200;
+            return $response->successful();
         } catch (Throwable) {
             return false;
         }
@@ -192,11 +192,11 @@ class OllamaModelService
                 'tone' => 'amber',
             ],
             [
-                'id' => 'gemma3:9b',
-                'name' => 'Gemma 3 · 9B',
+                'id' => 'gemma3:12b',
+                'name' => 'Gemma 3 · 12B',
                 'description' => 'Google larger Gemma. Noticeably better coherence on complex tasks.',
-                'size_approx' => '5.8 GB',
-                'param_size' => '9B',
+                'size_approx' => '8.1 GB',
+                'param_size' => '12B',
                 'category' => 'generation',
                 'tone' => 'amber',
             ],
@@ -213,7 +213,7 @@ class OllamaModelService
             [
                 'id' => 'nomic-embed-text',
                 'name' => 'Nomic Embed Text',
-                'description' => 'Default NovaCMS embedding model. 1024-dim, fast, practical for semantic search.',
+                'description' => 'Default NovaCMS embedding model. 768-dim, fast, practical for semantic search.',
                 'size_approx' => '274 MB',
                 'param_size' => '137M',
                 'category' => 'embeddings',

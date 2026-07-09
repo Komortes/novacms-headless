@@ -18,6 +18,14 @@ spec:
         {{- include "novacms.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: ollama
     spec:
+      {{- with .Values.ollama.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ollama.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: ollama
           image: "{{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}"

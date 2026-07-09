@@ -75,8 +75,11 @@ class GenerateContentSummaryJob implements ShouldQueue
             return;
         }
 
-        // Skip outdated or cancelled queued jobs.
-        if ($this->version !== $queueVersion->current($this->contentId)) {
+        // Skip outdated or cancelled queued jobs. A current version of 0 means the
+        // cache entry was lost (e.g. cache:clear); run rather than skip forever.
+        $currentVersion = $queueVersion->current($this->contentId);
+
+        if ($currentVersion !== 0 && $this->version !== $currentVersion) {
             $eventLogger->record(
                 content: $content,
                 event: 'skipped',
@@ -104,7 +107,7 @@ class GenerateContentSummaryJob implements ShouldQueue
         }
 
         $queuedAt = $this->resolveQueuedAt($content->summaryEvents, $this->version);
-        $waitMs = $queuedAt !== null ? now()->diffInMilliseconds($queuedAt) : null;
+        $waitMs = $queuedAt !== null ? (int) $queuedAt->diffInMilliseconds(now()) : null;
         $resolvedProvider = (string) config('ai.provider', $this->provider ?? 'ollama');
         $resolvedModel = isset($options['model']) ? (string) $options['model'] : null;
 

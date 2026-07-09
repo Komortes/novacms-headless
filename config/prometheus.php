@@ -13,10 +13,12 @@ return [
     /*
      * Only these IP's will be allowed to visit the above urls.
      * All IP's are allowed when empty.
+     * Comma-separated list; CIDR ranges are supported (e.g. "10.0.0.0/8").
      */
-    'allowed_ips' => [
-        // '1.2.3.4',
-    ],
+    'allowed_ips' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('PROMETHEUS_ALLOWED_IPS', '')),
+    ))),
 
     /*
      * This is the default namespace that will be

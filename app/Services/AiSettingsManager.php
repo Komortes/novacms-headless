@@ -19,14 +19,14 @@ class AiSettingsManager
                 'label' => 'Fast (draft checks)',
                 'models' => [
                     'ollama' => 'qwen2.5:0.5b',
-                    'openai' => 'gpt-4.1-mini',
+                    'openai' => 'gpt-4o-mini',
                 ],
             ],
             'balanced' => [
                 'label' => 'Balanced (default)',
                 'models' => [
                     'ollama' => 'qwen2.5:1.5b',
-                    'openai' => 'gpt-4o-mini',
+                    'openai' => 'gpt-4.1-mini',
                 ],
             ],
             'quality' => [

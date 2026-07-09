@@ -19,6 +19,8 @@ app:
     minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
+  # /metrics IP allowlist (comma-separated, CIDR supported). Empty = open.
+  metricsAllowedIps: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
 horizon:
   image:
@@ -62,6 +64,9 @@ ollama:
   persistence:
     size: 20Gi
     storageClass: ""
+  # Set these to target a dedicated (tainted) node group, e.g. in values-eks.yaml.
+  nodeSelector: {}
+  tolerations: []
   resources:
     requests:
       cpu: 500m
@@ -106,7 +111,10 @@ redis:
 kube-prometheus-stack:
   enabled: true
   grafana:
-    adminPassword: admin
+    admin:
+      existingSecret: novacms-secrets
+      userKey: GRAFANA_ADMIN_USER
+      passwordKey: GRAFANA_ADMIN_PASSWORD
     ingress:
       enabled: true
       ingressClassName: nginx

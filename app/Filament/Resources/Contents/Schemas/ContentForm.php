@@ -36,11 +36,18 @@ class ContentForm
                             ->native(false)
                             ->columnSpan(2),
                         Select::make('status')
-                            ->options([
-                                ContentStatus::DRAFT->value => 'Draft',
-                                ContentStatus::PUBLISHED->value => 'Published',
-                                ContentStatus::ARCHIVED->value => 'Archived',
-                            ])
+                            ->options(fn (?Content $record): array => $record === null
+                                ? [
+                                    // Publishing requires a ready AI summary, which cannot
+                                    // exist yet at creation time — create as draft first.
+                                    ContentStatus::DRAFT->value => 'Draft',
+                                    ContentStatus::ARCHIVED->value => 'Archived',
+                                ]
+                                : [
+                                    ContentStatus::DRAFT->value => 'Draft',
+                                    ContentStatus::PUBLISHED->value => 'Published',
+                                    ContentStatus::ARCHIVED->value => 'Archived',
+                                ])
                             ->default(ContentStatus::DRAFT->value)
                             ->required()
                             ->native(false)

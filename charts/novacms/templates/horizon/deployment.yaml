@@ -21,7 +21,7 @@ spec:
         - name: horizon
           image: "{{ .Values.horizon.image.repository }}:{{ .Values.horizon.image.tag }}"
           imagePullPolicy: {{ .Values.horizon.image.pullPolicy }}
-          command: ["php", "artisan", "horizon"]
+          args: ["php", "artisan", "horizon"]
           envFrom:
             - secretRef:
                 name: novacms-secrets
@@ -42,6 +42,21 @@ spec:
               value: "6379"
             - name: QUEUE_CONNECTION
               value: redis
+            # Horizon runs the AI jobs, so it needs the same runtime wiring as
+            # the app: Ollama endpoint, shared cache (queue versions live
+            # there), and Reverb credentials for realtime domain events.
+            - name: CACHE_STORE
+              value: redis
+            - name: OLLAMA_BASE_URL
+              value: http://{{ include "novacms.ollamaHost" . }}:11434
+            - name: BROADCAST_CONNECTION
+              value: reverb
+            - name: REVERB_HOST
+              value: {{ include "novacms.reverbHost" . }}
+            - name: REVERB_PORT
+              value: "8080"
+            - name: REVERB_SCHEME
+              value: http
           resources:
             {{- toYaml .Values.horizon.resources | nindent 12 }}
           livenessProbe:

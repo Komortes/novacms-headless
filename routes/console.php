@@ -136,6 +136,12 @@ Artisan::command('content:create-sample {--slug=sample-post} {--title=Sample Pos
         return Command::FAILURE;
     }
 
+    if ($status === ContentStatus::PUBLISHED) {
+        $this->error('Content cannot be created as published: the publish quality gate requires a ready AI summary. Create it as draft, then publish.');
+
+        return Command::FAILURE;
+    }
+
     $content = Content::query()->create([
         'type' => $type,
         'slug' => (string) $this->option('slug'),

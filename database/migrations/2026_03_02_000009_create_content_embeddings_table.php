@@ -42,7 +42,9 @@ return new class extends Migration
 
         if ($driver === 'pgsql') {
             DB::statement(sprintf('ALTER TABLE content_embeddings ADD COLUMN embedding vector(%d)', $dimensions));
-            DB::statement('CREATE INDEX content_embeddings_embedding_ivfflat_idx ON content_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)');
+            // HNSW instead of ivfflat: ivfflat clusters are fixed at build time, so an
+            // index created on an empty table degrades recall as data grows.
+            DB::statement('CREATE INDEX content_embeddings_embedding_hnsw_idx ON content_embeddings USING hnsw (embedding vector_cosine_ops)');
         }
     }
 
