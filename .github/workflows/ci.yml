@@ -98,3 +98,67 @@ jobs:
           QUEUE_CONNECTION: sync
           SESSION_DRIVER: array
           BROADCAST_CONNECTION: log
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: novacms_test
+          POSTGRES_USER: novacms_test
+          POSTGRES_PASSWORD: novacms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U novacms_test -d novacms_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: none
+          extensions: ctype, dom, fileinfo, json, mbstring, pdo_pgsql
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Run pgvector integration test
+        run: php artisan test tests/Feature/Postgres/PgvectorIntegrationTest.php
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: novacms_test
+          DB_USERNAME: novacms_test
+          DB_PASSWORD: novacms_test
+          AI_EMBEDDINGS_DIMENSIONS: 3
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          BROADCAST_CONNECTION: log
+          DOMAIN_EVENTS_STREAM_ENABLED: false
+          DOMAIN_EVENTS_BROADCAST_ENABLED: false
