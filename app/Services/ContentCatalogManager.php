@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DomainEvents;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
@@ -16,6 +17,9 @@ class ContentCatalogManager
     public function __construct(
         private readonly ContentMutationValidator $contentValidator,
         private readonly ContentPublishQualityGate $publishQualityGate,
+        private readonly ContentSummaryDispatcher $summaryDispatcher,
+        private readonly ContentEmbeddingDispatcher $embeddingDispatcher,
+        private readonly DomainEventPublisher $domainEventPublisher,
     ) {}
 
     /**
@@ -110,7 +114,9 @@ class ContentCatalogManager
             throw new InvalidArgumentException('No content records found in payload.');
         }
 
-        return DB::transaction(function () use ($items, $upsert): array {
+        $postCommitEffects = [];
+
+        $result = DB::transaction(function () use ($items, $upsert, &$postCommitEffects): array {
             $imported = 0;
             $created = 0;
             $updated = 0;
@@ -193,6 +199,12 @@ class ContentCatalogManager
                     Content::withoutEvents(fn () => $content->save());
                 }
 
+                $postCommitEffects[] = [
+                    'content_id' => $content->id,
+                    'generate_summary' => (! $existing || $contentChanged) && ! is_array($item['summary'] ?? null),
+                    'generate_embeddings' => ! $existing || $contentChanged,
+                ];
+
                 $imported++;
             }
 
@@ -204,6 +216,10 @@ class ContentCatalogManager
                 'skipped' => $skipped,
             ];
         });
+
+        $this->runPostCommitEffects($postCommitEffects);
+
+        return $result;
     }
 
     /**
@@ -332,5 +348,35 @@ class ContentCatalogManager
                 'last_error' => null,
             ],
         );
+    }
+
+    /**
+     * @param  list<array{content_id: int, generate_summary: bool, generate_embeddings: bool}>  $effects
+     */
+    private function runPostCommitEffects(array $effects): void
+    {
+        foreach ($effects as $effect) {
+            $content = Content::query()->find($effect['content_id']);
+
+            if (! $content) {
+                continue;
+            }
+
+            if ($effect['generate_summary'] && (bool) config('ai.summary.auto_dispatch', true)) {
+                $this->summaryDispatcher->dispatch($content);
+            }
+
+            if ($effect['generate_embeddings'] && (bool) config('ai.embeddings.auto_dispatch', true)) {
+                $this->embeddingDispatcher->dispatch($content);
+            }
+
+            $this->domainEventPublisher->publish(DomainEvents::CONTENT_UPDATED, [
+                'content_id' => $content->id,
+                'slug' => $content->slug,
+                'locale' => $content->locale,
+                'status' => $content->status instanceof ContentStatus ? $content->status->value : (string) $content->status,
+                'content_hash' => $content->content_hash,
+            ]);
+        }
     }
 }

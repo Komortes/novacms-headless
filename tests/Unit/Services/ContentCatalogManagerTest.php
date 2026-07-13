@@ -2,13 +2,19 @@
 
 namespace Tests\Unit\Services;
 
+use App\DomainEvents;
 use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
+use App\Jobs\GenerateContentEmbeddingsJob;
+use App\Jobs\GenerateContentSummaryJob;
 use App\Models\Content;
 use App\Services\ContentCatalogManager;
+use App\Services\DomainEventPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
+use Mockery;
 use Tests\TestCase;
 
 class ContentCatalogManagerTest extends TestCase
@@ -160,5 +166,35 @@ class ContentCatalogManagerTest extends TestCase
         $this->expectExceptionMessage('AI summary must be in "ready" state');
 
         app(ContentCatalogManager::class)->importFromJson((string) $payload);
+    }
+
+    public function test_it_dispatches_post_commit_work_for_imported_content_without_summary(): void
+    {
+        config()->set('ai.summary.auto_dispatch', true);
+        config()->set('ai.embeddings.auto_dispatch', true);
+        Queue::fake();
+
+        $publisher = Mockery::mock(DomainEventPublisher::class);
+        $publisher->shouldReceive('publish')
+            ->once()
+            ->withArgs(fn (string $event, array $payload): bool => $event === DomainEvents::CONTENT_UPDATED
+                && ($payload['slug'] ?? null) === 'post-commit-import');
+        $this->app->instance(DomainEventPublisher::class, $publisher);
+
+        $payload = json_encode([
+            'contents' => [[
+                'type' => 'post',
+                'slug' => 'post-commit-import',
+                'title' => 'Post Commit Import',
+                'body' => 'Imported body',
+                'locale' => 'en',
+                'status' => 'draft',
+            ]],
+        ]);
+
+        app(ContentCatalogManager::class)->importFromJson((string) $payload);
+
+        Queue::assertPushed(GenerateContentSummaryJob::class, 1);
+        Queue::assertPushed(GenerateContentEmbeddingsJob::class, 1);
     }
 }
