@@ -10,6 +10,7 @@ use App\Models\Content;
 use App\Models\ContentAiSummary;
 use App\Models\Prompt;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -58,7 +59,28 @@ class ContentSummaryGenerator
             $generated = $this->generatePayload($content, $promptVersion, $options);
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
-            if (! $this->contentStillMatches($content, $expectedContentHash)) {
+            $persisted = $this->persistIfContentMatches(
+                content: $content,
+                expectedContentHash: $expectedContentHash,
+                persist: function () use ($summary, $generated, $durationMs): void {
+                    $summary->forceFill([
+                        'summary_tldr' => $this->normalizeNullableString(data_get($generated['payload'], 'summary_tldr')),
+                        'summary_bullets' => $this->normalizeStringArray(data_get($generated['payload'], 'summary_bullets')),
+                        'summary_meta_description' => $this->normalizeNullableString(data_get($generated['payload'], 'summary_meta_description')),
+                        'summary_faq' => $this->normalizeFaq(data_get($generated['payload'], 'summary_faq')),
+                        'summary_tags' => $this->normalizeStringArray(data_get($generated['payload'], 'summary_tags')),
+                        'status' => SummaryStatus::READY,
+                        'model' => $generated['model'],
+                        'prompt_version' => $generated['prompt_version'],
+                        'tokens_in' => $generated['tokens_in'],
+                        'tokens_out' => $generated['tokens_out'],
+                        'generation_ms' => $durationMs,
+                        'last_error' => null,
+                    ])->save();
+                },
+            );
+
+            if (! $persisted) {
                 return $this->skipStaleGeneration(
                     content: $content,
                     summary: $summary,
@@ -70,21 +92,6 @@ class ContentSummaryGenerator
                     expectedContentHash: $expectedContentHash,
                 );
             }
-
-            $summary->forceFill([
-                'summary_tldr' => $this->normalizeNullableString(data_get($generated['payload'], 'summary_tldr')),
-                'summary_bullets' => $this->normalizeStringArray(data_get($generated['payload'], 'summary_bullets')),
-                'summary_meta_description' => $this->normalizeNullableString(data_get($generated['payload'], 'summary_meta_description')),
-                'summary_faq' => $this->normalizeFaq(data_get($generated['payload'], 'summary_faq')),
-                'summary_tags' => $this->normalizeStringArray(data_get($generated['payload'], 'summary_tags')),
-                'status' => SummaryStatus::READY,
-                'model' => $generated['model'],
-                'prompt_version' => $generated['prompt_version'],
-                'tokens_in' => $generated['tokens_in'],
-                'tokens_out' => $generated['tokens_out'],
-                'generation_ms' => $durationMs,
-                'last_error' => null,
-            ])->save();
 
             $this->eventLogger->record(
                 content: $content,
@@ -114,7 +121,19 @@ class ContentSummaryGenerator
         } catch (Throwable $exception) {
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
-            if (! $this->contentStillMatches($content, $expectedContentHash)) {
+            $persisted = $this->persistIfContentMatches(
+                content: $content,
+                expectedContentHash: $expectedContentHash,
+                persist: function () use ($summary, $durationMs, $exception): void {
+                    $summary->forceFill([
+                        'status' => SummaryStatus::FAILED,
+                        'generation_ms' => $durationMs,
+                        'last_error' => Str::limit($exception->getMessage(), 2000),
+                    ])->save();
+                },
+            );
+
+            if (! $persisted) {
                 return $this->skipStaleGeneration(
                     content: $content,
                     summary: $summary,
@@ -126,12 +145,6 @@ class ContentSummaryGenerator
                     expectedContentHash: $expectedContentHash,
                 );
             }
-
-            $summary->forceFill([
-                'status' => SummaryStatus::FAILED,
-                'generation_ms' => $durationMs,
-                'last_error' => Str::limit($exception->getMessage(), 2000),
-            ])->save();
 
             $this->eventLogger->record(
                 content: $content,
@@ -163,12 +176,22 @@ class ContentSummaryGenerator
         return $summary->refresh();
     }
 
-    private function contentStillMatches(Content $content, string $expectedContentHash): bool
-    {
-        return Content::query()
-            ->whereKey($content->id)
-            ->where('content_hash', $expectedContentHash)
-            ->exists();
+    private function persistIfContentMatches(
+        Content $content,
+        string $expectedContentHash,
+        \Closure $persist,
+    ): bool {
+        return DB::transaction(function () use ($content, $expectedContentHash, $persist): bool {
+            $currentContent = Content::query()->lockForUpdate()->find($content->id);
+
+            if (! $currentContent || $currentContent->content_hash !== $expectedContentHash) {
+                return false;
+            }
+
+            $persist();
+
+            return true;
+        });
     }
 
     private function skipStaleGeneration(
