@@ -6,12 +6,18 @@ use App\Enums\ContentStatus;
 use App\Enums\ContentType;
 use App\Enums\SummaryStatus;
 use App\Models\Content;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class ContentCatalogManager
 {
+    public function __construct(
+        private readonly ContentMutationValidator $contentValidator,
+        private readonly ContentPublishQualityGate $publishQualityGate,
+    ) {}
+
     /**
      * @return array{
      *     exported_at: string,
@@ -125,14 +131,17 @@ class ContentCatalogManager
 
                 $content = $existing ?? new Content;
                 $originalHash = $existing?->content_hash;
+                $targetStatus = ContentStatus::from($item['status']);
+                $contentInput = Arr::except($item, ['status', 'summary']);
+                $validated = $existing
+                    ? $this->contentValidator->validateForUpdate($content, $contentInput)
+                    : $this->contentValidator->validateForCreate($contentInput);
 
                 $content->fill([
-                    'type' => $item['type'],
-                    'slug' => $item['slug'],
-                    'title' => $item['title'],
-                    'body' => $item['body'],
-                    'locale' => $item['locale'],
-                    'status' => $item['status'],
+                    ...$validated,
+                    'status' => $targetStatus === ContentStatus::PUBLISHED
+                        ? ContentStatus::DRAFT
+                        : $targetStatus,
                 ]);
                 $content->content_hash = $content->generateContentHash();
 
@@ -144,8 +153,14 @@ class ContentCatalogManager
                     $created++;
                 }
 
-                if ($originalHash !== null && $originalHash !== $content->content_hash) {
+                $contentChanged = $originalHash !== null && $originalHash !== $content->content_hash;
+
+                if ($contentChanged) {
                     $content->embeddings()->delete();
+                }
+
+                if (! $existing || $contentChanged) {
+                    $this->invalidateSummary($content);
                 }
 
                 if (is_array($item['summary'] ?? null)) {
@@ -170,6 +185,12 @@ class ContentCatalogManager
                     );
 
                     $summaries++;
+                }
+
+                if ($targetStatus === ContentStatus::PUBLISHED) {
+                    $this->publishQualityGate->assertCanPublish($content);
+                    $content->forceFill(['status' => ContentStatus::PUBLISHED]);
+                    Content::withoutEvents(fn () => $content->save());
                 }
 
                 $imported++;
@@ -290,5 +311,26 @@ class ContentCatalogManager
             && is_scalar($item['title'])
             && is_scalar($item['body'])
             && is_scalar($item['locale']);
+    }
+
+    private function invalidateSummary(Content $content): void
+    {
+        $content->summary()->updateOrCreate(
+            ['content_id' => $content->id],
+            [
+                'summary_tldr' => null,
+                'summary_bullets' => null,
+                'summary_meta_description' => null,
+                'summary_faq' => null,
+                'summary_tags' => null,
+                'status' => SummaryStatus::PENDING,
+                'model' => null,
+                'prompt_version' => null,
+                'tokens_in' => null,
+                'tokens_out' => null,
+                'generation_ms' => null,
+                'last_error' => null,
+            ],
+        );
     }
 }

@@ -8,6 +8,7 @@ use App\Enums\SummaryStatus;
 use App\Models\Content;
 use App\Services\ContentCatalogManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class ContentCatalogManagerTest extends TestCase
@@ -101,5 +102,63 @@ class ContentCatalogManagerTest extends TestCase
             'model' => 'qwen2.5:1.5b',
             'prompt_version' => '1.0.0',
         ]);
+    }
+
+    public function test_it_invalidates_existing_summary_when_import_changes_content_without_summary(): void
+    {
+        $content = Content::query()->create([
+            'type' => ContentType::POST,
+            'slug' => 'catalog-update',
+            'title' => 'Catalog Update',
+            'body' => 'Original body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        $content->summary()->update([
+            'status' => SummaryStatus::READY,
+            'summary_tldr' => 'An old summary that must not survive a content update.',
+            'summary_bullets' => ['One', 'Two'],
+            'summary_meta_description' => 'Old metadata.',
+            'summary_faq' => [['question' => 'Old?', 'answer' => 'Yes.']],
+            'summary_tags' => ['old', 'summary'],
+        ]);
+
+        $payload = json_encode([
+            'contents' => [[
+                'type' => 'post',
+                'slug' => 'catalog-update',
+                'title' => 'Catalog Update',
+                'body' => 'Updated body',
+                'locale' => 'en',
+                'status' => 'draft',
+            ]],
+        ]);
+
+        app(ContentCatalogManager::class)->importFromJson((string) $payload);
+
+        $summary = $content->fresh()->summary;
+        $this->assertSame(SummaryStatus::PENDING, $summary?->status);
+        $this->assertNull($summary?->summary_tldr);
+        $this->assertNull($summary?->model);
+    }
+
+    public function test_it_rejects_published_import_without_ready_summary(): void
+    {
+        $payload = json_encode([
+            'contents' => [[
+                'type' => 'post',
+                'slug' => 'invalid-published-import',
+                'title' => 'Invalid Published Import',
+                'body' => 'Imported body',
+                'locale' => 'en',
+                'status' => 'published',
+            ]],
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('AI summary must be in "ready" state');
+
+        app(ContentCatalogManager::class)->importFromJson((string) $payload);
     }
 }
