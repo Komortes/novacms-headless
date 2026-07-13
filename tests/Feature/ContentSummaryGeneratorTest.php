@@ -148,6 +148,61 @@ class ContentSummaryGeneratorTest extends TestCase
         }
     }
 
+    public function test_it_does_not_persist_a_summary_when_content_changes_during_generation(): void
+    {
+        $this->seed(PromptSeeder::class);
+        config()->set('ai.summary.auto_dispatch', false);
+        config()->set('ai.embeddings.auto_dispatch', false);
+
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'stale-summary',
+            'title' => 'Stale Summary',
+            'body' => 'Original body',
+            'locale' => 'en',
+            'status' => ContentStatus::DRAFT,
+        ]);
+
+        app()->bind(AiProviderInterface::class, function () use ($content) {
+            return new class($content->id) implements AiProviderInterface
+            {
+                public function __construct(private readonly int $contentId) {}
+
+                public function generate(string $prompt, array $options = []): AiGenerationResult
+                {
+                    Content::query()->findOrFail($this->contentId)->update([
+                        'body' => 'Body changed while the AI request was running',
+                    ]);
+
+                    return new AiGenerationResult(
+                        text: json_encode([
+                            'summary_tldr' => 'This summary belongs to the original body.',
+                            'summary_bullets' => ['Old point one', 'Old point two'],
+                            'summary_meta_description' => 'Old metadata',
+                            'summary_faq' => [['question' => 'Old?', 'answer' => 'Yes.']],
+                            'summary_tags' => ['old', 'stale'],
+                        ]) ?: '{}',
+                        model: 'fake-model',
+                    );
+                }
+
+                public function embed(string $input, array $options = []): array
+                {
+                    return [0.1, 0.2, 0.3];
+                }
+            };
+        });
+
+        $summary = app(ContentSummaryGenerator::class)->generateForContent($content);
+
+        $this->assertSame(SummaryStatus::PENDING, $summary->status);
+        $this->assertNull($summary->summary_tldr);
+        $this->assertDatabaseHas('content_ai_summary_events', [
+            'content_id' => $content->id,
+            'event' => 'skipped',
+        ]);
+    }
+
     public function test_it_uses_map_reduce_pipeline_for_long_content(): void
     {
         $this->seed(PromptSeeder::class);

@@ -32,6 +32,7 @@ class ContentSummaryGenerator
         array $options = [],
         array $runContext = [],
     ): ContentAiSummary {
+        $expectedContentHash = (string) $content->content_hash;
         $summary = $content->summary()->firstOrCreate(
             ['content_id' => $content->id],
             ['status' => SummaryStatus::PENDING],
@@ -56,6 +57,19 @@ class ContentSummaryGenerator
         try {
             $generated = $this->generatePayload($content, $promptVersion, $options);
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            if (! $this->contentStillMatches($content, $expectedContentHash)) {
+                return $this->skipStaleGeneration(
+                    content: $content,
+                    summary: $summary,
+                    provider: $provider,
+                    model: $selectedModel,
+                    queueVersion: $queueVersion,
+                    waitMs: $waitMs,
+                    durationMs: $durationMs,
+                    expectedContentHash: $expectedContentHash,
+                );
+            }
 
             $summary->forceFill([
                 'summary_tldr' => $this->normalizeNullableString(data_get($generated['payload'], 'summary_tldr')),
@@ -100,6 +114,19 @@ class ContentSummaryGenerator
         } catch (Throwable $exception) {
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
+            if (! $this->contentStillMatches($content, $expectedContentHash)) {
+                return $this->skipStaleGeneration(
+                    content: $content,
+                    summary: $summary,
+                    provider: $provider,
+                    model: $selectedModel,
+                    queueVersion: $queueVersion,
+                    waitMs: $waitMs,
+                    durationMs: $durationMs,
+                    expectedContentHash: $expectedContentHash,
+                );
+            }
+
             $summary->forceFill([
                 'status' => SummaryStatus::FAILED,
                 'generation_ms' => $durationMs,
@@ -134,6 +161,46 @@ class ContentSummaryGenerator
         }
 
         return $summary->refresh();
+    }
+
+    private function contentStillMatches(Content $content, string $expectedContentHash): bool
+    {
+        return Content::query()
+            ->whereKey($content->id)
+            ->where('content_hash', $expectedContentHash)
+            ->exists();
+    }
+
+    private function skipStaleGeneration(
+        Content $content,
+        ContentAiSummary $summary,
+        string $provider,
+        ?string $model,
+        ?int $queueVersion,
+        ?int $waitMs,
+        int $durationMs,
+        string $expectedContentHash,
+    ): ContentAiSummary {
+        $currentSummary = $summary->fresh() ?? $summary;
+        $currentContentHash = Content::query()->whereKey($content->id)->value('content_hash');
+
+        $this->eventLogger->record(
+            content: $content,
+            event: 'skipped',
+            summary: $currentSummary,
+            provider: $provider,
+            model: $model,
+            queueVersion: $queueVersion,
+            waitMs: $waitMs,
+            durationMs: $durationMs,
+            message: 'Content changed while summary generation was running.',
+            meta: [
+                'expected_content_hash' => $expectedContentHash,
+                'current_content_hash' => is_string($currentContentHash) ? $currentContentHash : null,
+            ],
+        );
+
+        return $currentSummary;
     }
 
     /**
