@@ -80,6 +80,10 @@ class GenerateContentEmbeddingsJob implements ShouldQueue
             model: $this->model,
         );
 
+        if ($result['stale']) {
+            return;
+        }
+
         $domainEventPublisher->publish(DomainEvents::EMBEDDING_CREATED, [
             'content_id' => $content->id,
             'content_hash' => $content->content_hash,

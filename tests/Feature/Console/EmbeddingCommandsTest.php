@@ -68,6 +68,7 @@ class EmbeddingCommandsTest extends TestCase
     public function test_reindex_embeddings_command_can_run_sync_for_single_content(): void
     {
         config()->set('ai.embeddings.chunk_chars', 5000);
+        config()->set('ai.embeddings.dimensions', 3);
         $this->mockEmbeddingProvider([0.2, 0.4, 0.6]);
 
         $content = Content::create([

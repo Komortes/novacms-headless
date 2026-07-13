@@ -162,6 +162,47 @@ GRAPHQL,
         $response->assertJsonPath('data.semanticSearch.0.content.slug', 'published-match');
     }
 
+    public function test_semantic_search_ignores_embeddings_for_an_outdated_content_hash(): void
+    {
+        $this->mockEmbeddingProvider([1.0, 0.0, 0.0]);
+
+        $content = Content::create([
+            'type' => ContentType::POST,
+            'slug' => 'stale-embedding',
+            'title' => 'Stale Embedding',
+            'body' => 'Current body',
+            'locale' => 'en',
+            'status' => ContentStatus::PUBLISHED,
+        ]);
+
+        ContentEmbedding::create([
+            'content_id' => $content->id,
+            'source' => 'body',
+            'chunk_index' => 0,
+            'content_hash' => str_repeat('0', 64),
+            'provider' => 'ollama',
+            'model' => 'nomic-embed-text',
+            'dimensions' => 3,
+            'embedding' => [1.0, 0.0, 0.0],
+        ]);
+
+        $response = $this->postJson('/graphql', [
+            'query' => <<<'GRAPHQL'
+query {
+  semanticSearch(query: "search text") {
+    content {
+      slug
+    }
+  }
+}
+GRAPHQL,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonMissingPath('errors');
+        $response->assertJsonCount(0, 'data.semanticSearch');
+    }
+
     public function test_semantic_search_can_filter_by_status_type_and_min_score(): void
     {
         $this->mockEmbeddingProvider([1.0, 0.0, 0.0]);

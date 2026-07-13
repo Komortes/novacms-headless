@@ -34,7 +34,8 @@ class SemanticSearchService
             return [];
         }
 
-        $vector = $this->embedText($normalizedQuery);
+        $embedding = $this->embedText($normalizedQuery);
+        $vector = $embedding['vector'];
 
         if ($vector === []) {
             return [];
@@ -47,6 +48,8 @@ class SemanticSearchService
             status: $status,
             type: $type,
             minScore: $minScore,
+            provider: $embedding['provider'],
+            model: $embedding['model'],
         );
     }
 
@@ -61,7 +64,8 @@ class SemanticSearchService
         ?ContentType $type = null,
         ?float $minScore = null,
     ): array {
-        $centroid = $this->resolveContentCentroidVector($contentId);
+        $profile = $this->embeddingProfile();
+        $centroid = $this->resolveContentCentroidVector($contentId, $profile['provider'], $profile['model']);
 
         if ($centroid === []) {
             return [];
@@ -75,6 +79,8 @@ class SemanticSearchService
             type: $type,
             minScore: $minScore,
             excludeContentId: $contentId,
+            provider: $profile['provider'],
+            model: $profile['model'],
         );
     }
 
@@ -90,6 +96,8 @@ class SemanticSearchService
         ?ContentType $type = null,
         ?float $minScore = null,
         ?int $excludeContentId = null,
+        string $provider = '',
+        string $model = '',
     ): array {
         $safeLimit = max(1, min(100, $limit));
         $scoreThreshold = $this->normalizeMinScore($minScore);
@@ -103,6 +111,8 @@ class SemanticSearchService
                 type: $type,
                 minScore: $scoreThreshold,
                 excludeContentId: $excludeContentId,
+                provider: $provider,
+                model: $model,
             );
         }
 
@@ -114,6 +124,8 @@ class SemanticSearchService
             type: $type,
             minScore: $scoreThreshold,
             excludeContentId: $excludeContentId,
+            provider: $provider,
+            model: $model,
         );
     }
 
@@ -129,12 +141,18 @@ class SemanticSearchService
         ?ContentType $type,
         ?float $minScore,
         ?int $excludeContentId,
+        string $provider,
+        string $model,
     ): array {
         $vectorLiteral = $this->vectorToSqlLiteral($queryVector);
         $scoreExpression = 'MAX(1 - (content_embeddings.embedding <=> ?::vector))';
 
         $query = DB::table('content_embeddings')
             ->join('contents', 'contents.id', '=', 'content_embeddings.content_id')
+            ->whereColumn('content_embeddings.content_hash', 'contents.content_hash')
+            ->where('content_embeddings.provider', $provider)
+            ->where('content_embeddings.model', $model)
+            ->where('content_embeddings.dimensions', count($queryVector))
             ->selectRaw(
                 "content_embeddings.content_id, {$scoreExpression} as score",
                 [$vectorLiteral],
@@ -181,9 +199,15 @@ class SemanticSearchService
         ?ContentType $type,
         ?float $minScore,
         ?int $excludeContentId,
+        string $provider,
+        string $model,
     ): array {
         $rows = ContentEmbedding::query()
             ->with('content')
+            ->where('provider', $provider)
+            ->where('model', $model)
+            ->where('dimensions', count($queryVector))
+            ->whereHas('content', fn ($query) => $query->whereColumn('contents.content_hash', 'content_embeddings.content_hash'))
             ->when(
                 is_string($locale) && $locale !== '',
                 fn ($query) => $query->whereHas('content', fn ($contentQuery) => $contentQuery->where('locale', $locale)),
@@ -267,13 +291,21 @@ class SemanticSearchService
     /**
      * @return list<float>
      */
-    private function resolveContentCentroidVector(int $contentId): array
+    private function resolveContentCentroidVector(int $contentId, string $provider, string $model): array
     {
         $vectors = [];
+        $contentHash = Content::query()->whereKey($contentId)->value('content_hash');
+
+        if (! is_string($contentHash) || $contentHash === '') {
+            return [];
+        }
 
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
             $rawVectors = DB::table('content_embeddings')
                 ->where('content_id', $contentId)
+                ->where('content_hash', $contentHash)
+                ->where('provider', $provider)
+                ->where('model', $model)
                 ->selectRaw('embedding::text as embedding_text')
                 ->pluck('embedding_text');
 
@@ -287,6 +319,9 @@ class SemanticSearchService
         } else {
             $rawVectors = ContentEmbedding::query()
                 ->where('content_id', $contentId)
+                ->where('content_hash', $contentHash)
+                ->where('provider', $provider)
+                ->where('model', $model)
                 ->pluck('embedding');
 
             foreach ($rawVectors as $rawVector) {
@@ -306,19 +341,32 @@ class SemanticSearchService
     }
 
     /**
-     * @return list<float>
+     * @return array{vector: list<float>, provider: string, model: string}
      */
     private function embedText(string $text): array
     {
-        $provider = (string) config('ai.embeddings.provider', config('ai.provider', 'ollama'));
-        $model = (string) config('ai.embeddings.model', '');
-        $options = [];
+        $profile = $this->embeddingProfile();
 
-        if ($model !== '') {
-            $options['model'] = $model;
-        }
+        return [
+            'vector' => $this->providerFactory
+                ->make($profile['provider'])
+                ->embed($text, ['model' => $profile['model']]),
+            ...$profile,
+        ];
+    }
 
-        return $this->providerFactory->make($provider)->embed($text, $options);
+    /**
+     * @return array{provider: string, model: string}
+     */
+    private function embeddingProfile(): array
+    {
+        $provider = trim((string) config('ai.embeddings.provider', config('ai.provider', 'ollama')));
+        $model = trim((string) config('ai.embeddings.model', ''));
+
+        return [
+            'provider' => $provider !== '' ? $provider : 'ollama',
+            'model' => $model !== '' ? $model : 'nomic-embed-text',
+        ];
     }
 
     /**

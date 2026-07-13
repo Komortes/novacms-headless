@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\AI\AiProviderFactory;
+use App\AI\Exceptions\AiProviderException;
 use App\Models\Content;
 use App\Models\ContentEmbedding;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -15,7 +17,7 @@ class ContentEmbeddingGenerator
     ) {}
 
     /**
-     * @return array{chunks: int, deleted: int, provider: string, model: string, dimensions: int}
+     * @return array{chunks: int, deleted: int, provider: string, model: string, dimensions: int, stale: bool}
      */
     public function generateForContent(Content $content, ?string $provider = null, ?string $model = null): array
     {
@@ -23,57 +25,70 @@ class ContentEmbeddingGenerator
         $resolvedModel = $this->resolveModel($resolvedProvider, $model);
         $chunks = $this->splitBodyIntoChunks((string) $content->body);
         $providerClient = $this->providerFactory->make($resolvedProvider);
-        $writtenChunks = 0;
+        $expectedDimensions = max(1, (int) config('ai.embeddings.dimensions', 768));
+        $preparedEmbeddings = [];
         $dimensions = 0;
 
         foreach ($chunks as $index => $chunk) {
             $vector = $providerClient->embed($chunk, ['model' => $resolvedModel]);
 
             if ($vector === []) {
-                continue;
+                throw new AiProviderException("Embedding provider returned an empty vector for chunk [{$index}].");
             }
 
             $dimensions = count($vector);
 
-            ContentEmbedding::query()->updateOrCreate(
-                [
-                    'content_id' => $content->id,
-                    'source' => 'body',
-                    'chunk_index' => $index,
-                    'model' => $resolvedModel,
-                ],
-                [
-                    'content_hash' => $content->content_hash,
-                    'provider' => $resolvedProvider,
-                    'dimensions' => $dimensions,
-                    'embedding' => $this->prepareEmbeddingValue($vector),
-                    'meta' => [
-                        'chunk_chars' => Str::length($chunk),
-                    ],
-                ],
-            );
+            if ($dimensions !== $expectedDimensions) {
+                throw new AiProviderException(
+                    "Embedding model [{$resolvedModel}] returned {$dimensions} dimensions; configured storage expects {$expectedDimensions}.",
+                );
+            }
 
-            $writtenChunks++;
+            $preparedEmbeddings[] = [
+                'chunk_index' => $index,
+                'embedding' => $this->prepareEmbeddingValue($vector),
+                'meta' => [
+                    'chunk_chars' => Str::length($chunk),
+                ],
+            ];
         }
 
-        $deleted = ContentEmbedding::query()
-            ->where('content_id', $content->id)
-            ->where('source', 'body')
-            ->where(function ($query) use ($content, $resolvedProvider, $resolvedModel, $writtenChunks): void {
-                $query
-                    ->where('content_hash', '!=', $content->content_hash)
-                    ->orWhere('provider', '!=', $resolvedProvider)
-                    ->orWhere('model', '!=', $resolvedModel)
-                    ->orWhere('chunk_index', '>=', $writtenChunks);
-            })
-            ->delete();
+        $replacement = DB::transaction(function () use ($content, $resolvedProvider, $resolvedModel, $dimensions, $preparedEmbeddings): ?int {
+            $currentContent = Content::query()->lockForUpdate()->find($content->id);
+
+            if (! $currentContent || $currentContent->content_hash !== $content->content_hash) {
+                return null;
+            }
+
+            $deleted = ContentEmbedding::query()
+                ->where('content_id', $content->id)
+                ->where('source', 'body')
+                ->delete();
+
+            foreach ($preparedEmbeddings as $preparedEmbedding) {
+                ContentEmbedding::query()->create([
+                    'content_id' => $content->id,
+                    'source' => 'body',
+                    'chunk_index' => $preparedEmbedding['chunk_index'],
+                    'content_hash' => $content->content_hash,
+                    'provider' => $resolvedProvider,
+                    'model' => $resolvedModel,
+                    'dimensions' => $dimensions,
+                    'embedding' => $preparedEmbedding['embedding'],
+                    'meta' => $preparedEmbedding['meta'],
+                ]);
+            }
+
+            return $deleted;
+        });
 
         return [
-            'chunks' => $writtenChunks,
-            'deleted' => $deleted,
+            'chunks' => $replacement === null ? 0 : count($preparedEmbeddings),
+            'deleted' => $replacement ?? 0,
             'provider' => $resolvedProvider,
             'model' => $resolvedModel,
             'dimensions' => $dimensions,
+            'stale' => $replacement === null,
         ];
     }
 
